@@ -77,6 +77,11 @@ function ThankYouV2() {
 
       <section className="bg-white pb-12">
         <div className="mx-auto max-w-4xl px-4">
+          <div className="mb-4 text-center">
+            <h2 className="text-xl md:text-2xl font-bold text-gray-900">
+              {process.env.NEXT_PUBLIC_THANKYOU_TOP_VIDEO_TITLE || "Thank You for Filling Out the Form"}
+            </h2>
+          </div>
           <div className="rounded-2xl overflow-hidden shadow-lg border border-gray-200 bg-black">
             <video
               src={TOP_VIDEO_URL}
