@@ -16,6 +16,7 @@ const VIDEO_3_SUBTITLE = process.env.NEXT_PUBLIC_THANKYOU_VIDEO_3_SUBTITLE || ""
 const CALLIN_DISPLAY = process.env.NEXT_PUBLIC_CALLIN_DISPLAY || ""
 const CALLIN_HREF = process.env.NEXT_PUBLIC_CALLIN_HREF || ""
 const FOUNDER_NOTE = process.env.NEXT_PUBLIC_FOUNDER_NOTE || ""
+const HIGHLIGHT_COLOR = process.env.NEXT_PUBLIC_HIGHLIGHT_COLOR || "#FACC15"
 
 // New "v2" thank-you layout activates only when the top video env var is set.
 // Existing clients without the env var see the original layout untouched.
@@ -64,7 +65,7 @@ function ThankYouV2() {
       <section className="bg-white">
         <div className="mx-auto max-w-3xl px-4 pt-12 pb-8 text-center">
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-gray-900">
-            <CheckCircle2 className="h-7 w-7" style={{ color: config.accentColor }} />
+            <CheckCircle2 className="h-7 w-7" style={{ color: HIGHLIGHT_COLOR }} />
           </div>
           <h1 className="text-3xl md:text-5xl font-bold tracking-tight text-gray-900 text-balance">
             Thanks. Your Info Is In.
@@ -97,38 +98,42 @@ function ThankYouV2() {
       </section>
 
       {callinDisplay && (
-        <section className="bg-gray-900 text-white">
-          <div className="mx-auto max-w-3xl px-4 py-12 md:py-16 text-center">
-            <p
-              className="uppercase tracking-widest text-xs font-semibold mb-3"
-              style={{ color: config.accentColor }}
-            >
-              Important
-            </p>
-            <h2 className="text-2xl md:text-3xl font-bold mb-4 text-balance">
-              Expect a call or text from{" "}
-              <span style={{ color: config.accentColor }}>{callinDisplay}</span>
-            </h2>
-            <p className="text-base md:text-lg text-white/80 max-w-2xl mx-auto">
-              That number is our local team. Save it to your phone so you don't miss us.
-              Prefer to reach out first? Call or text us directly and let us know how you'd like to be contacted.
-            </p>
-            <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3">
-              <a
-                href={`tel:${callinHref}`}
-                className="inline-flex items-center gap-2 rounded-full px-8 py-3 text-base font-semibold text-gray-900 hover:opacity-90 transition-opacity w-full sm:w-auto justify-center"
-                style={{ backgroundColor: config.accentColor }}
-              >
-                <Phone className="h-5 w-5" />
-                Call {callinDisplay}
-              </a>
-              <a
-                href={`sms:${callinHref}`}
-                className="inline-flex items-center gap-2 rounded-full bg-white/10 hover:bg-white/15 ring-1 ring-white/30 px-8 py-3 text-base font-semibold text-white transition-colors w-full sm:w-auto justify-center"
-              >
-                <MessageSquare className="h-5 w-5" />
-                Text Us Instead
-              </a>
+        <section className="bg-[#FAFAF9]">
+          <div className="mx-auto max-w-3xl px-4 py-12 md:py-16">
+            <div className="rounded-2xl bg-white shadow-md ring-1 ring-gray-200 px-6 py-10 md:px-10 md:py-12 text-center">
+              <p className="uppercase tracking-widest text-xs font-semibold mb-3 text-gray-500">
+                Important
+              </p>
+              <h2 className="text-2xl md:text-3xl font-bold mb-4 text-balance text-gray-900">
+                Expect a call or text from{" "}
+                <span
+                  className="whitespace-nowrap rounded-md px-2 py-0.5"
+                  style={{ backgroundColor: HIGHLIGHT_COLOR, color: "#0F1D2F" }}
+                >
+                  {callinDisplay}
+                </span>
+              </h2>
+              <p className="text-base md:text-lg text-gray-600 max-w-2xl mx-auto">
+                That number is our local team. Save it to your phone so you don't miss us.
+                Prefer to reach out first? Call or text us directly and let us know how you'd like to be contacted.
+              </p>
+              <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3">
+                <a
+                  href={`tel:${callinHref}`}
+                  className="inline-flex items-center gap-2 rounded-full px-8 py-3 text-base font-semibold text-gray-900 hover:opacity-90 transition-opacity w-full sm:w-auto justify-center shadow"
+                  style={{ backgroundColor: HIGHLIGHT_COLOR }}
+                >
+                  <Phone className="h-5 w-5" />
+                  Call {callinDisplay}
+                </a>
+                <a
+                  href={`sms:${callinHref}`}
+                  className="inline-flex items-center gap-2 rounded-full bg-gray-900 hover:bg-black px-8 py-3 text-base font-semibold text-white transition-colors w-full sm:w-auto justify-center"
+                >
+                  <MessageSquare className="h-5 w-5" />
+                  Text Us Instead
+                </a>
+              </div>
             </div>
           </div>
         </section>
@@ -172,10 +177,7 @@ function ThankYouV2() {
 
             {config.headshotUrl && (
               <div className="flex justify-center mb-6">
-                <div
-                  className="relative h-20 w-20 overflow-hidden rounded-full border-2"
-                  style={{ borderColor: config.accentColor }}
-                >
+                <div className="relative h-20 w-20 overflow-hidden rounded-full ring-2 ring-gray-200">
                   <Image
                     src={config.headshotUrl}
                     alt={config.ownerName || config.companyName}
