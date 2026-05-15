@@ -9,6 +9,13 @@ interface HeaderProps {
   headerBgColor?: string
 }
 
+// When LOGO_HEIGHT_PX is set the logo renders as a wide banner (height fixed,
+// width auto) and the company-name text is hidden because a banner logo
+// already contains the name. Other clients keep the original 44x44 square
+// logo + company-name layout.
+const LOGO_HEIGHT_PX = Number(process.env.LOGO_HEIGHT_PX || 0)
+const isBannerLogo = LOGO_HEIGHT_PX > 0
+
 export function Header({ companyName, phoneDisplay, phoneHref, logoUrl, headerBgColor = "#ffffff" }: HeaderProps) {
   const isDark = headerBgColor !== "#ffffff" && headerBgColor !== "white"
 
@@ -18,21 +25,35 @@ export function Header({ companyName, phoneDisplay, phoneHref, logoUrl, headerBg
         {/* Logo + Company Name */}
         <div className="flex items-center gap-3">
           {logoUrl && (
-            <Image
-              src={logoUrl}
-              alt={companyName}
-              width={44}
-              height={44}
-              className="h-11 w-11 flex-shrink-0 rounded-lg object-contain"
-              unoptimized
-            />
+            isBannerLogo ? (
+              <Image
+                src={logoUrl}
+                alt={companyName}
+                width={Math.round(LOGO_HEIGHT_PX * 4)}
+                height={LOGO_HEIGHT_PX}
+                className="flex-shrink-0 object-contain w-auto"
+                style={{ height: `${LOGO_HEIGHT_PX}px` }}
+                unoptimized
+              />
+            ) : (
+              <Image
+                src={logoUrl}
+                alt={companyName}
+                width={44}
+                height={44}
+                className="h-11 w-11 flex-shrink-0 rounded-lg object-contain"
+                unoptimized
+              />
+            )
           )}
-          <span
-            className="text-base font-bold leading-tight"
-            style={{ color: isDark ? "white" : "var(--accent)" }}
-          >
-            {companyName}
-          </span>
+          {!isBannerLogo && (
+            <span
+              className="text-base font-bold leading-tight"
+              style={{ color: isDark ? "white" : "var(--accent)" }}
+            >
+              {companyName}
+            </span>
+          )}
         </div>
 
         {/* Phone CTA */}

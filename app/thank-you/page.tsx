@@ -1,7 +1,235 @@
 import Image from "next/image"
-import { CheckCircle2, Phone } from "lucide-react"
+import { CheckCircle2, Phone, MessageSquare } from "lucide-react"
 import config from "@/lib/config"
+import { ClickToPlayVideo } from "@/components/thankyou/click-to-play-video"
+
+// Per-client env vars (read on the server). All optional — when unset, the
+// page falls back to the original simpler layout so non-ABQ clients are
+// unaffected.
+const TOP_VIDEO_URL = process.env.NEXT_PUBLIC_THANKYOU_TOP_VIDEO_URL || ""
+const VIDEO_2_URL = process.env.NEXT_PUBLIC_THANKYOU_VIDEO_2_URL || ""
+const VIDEO_2_TITLE = process.env.NEXT_PUBLIC_THANKYOU_VIDEO_2_TITLE || ""
+const VIDEO_2_SUBTITLE = process.env.NEXT_PUBLIC_THANKYOU_VIDEO_2_SUBTITLE || ""
+const VIDEO_3_URL = process.env.NEXT_PUBLIC_THANKYOU_VIDEO_3_URL || ""
+const VIDEO_3_TITLE = process.env.NEXT_PUBLIC_THANKYOU_VIDEO_3_TITLE || ""
+const VIDEO_3_SUBTITLE = process.env.NEXT_PUBLIC_THANKYOU_VIDEO_3_SUBTITLE || ""
+const CALLIN_DISPLAY = process.env.NEXT_PUBLIC_CALLIN_DISPLAY || ""
+const CALLIN_HREF = process.env.NEXT_PUBLIC_CALLIN_HREF || ""
+const FOUNDER_NOTE = process.env.NEXT_PUBLIC_FOUNDER_NOTE || ""
+
+// New "v2" thank-you layout activates only when the top video env var is set.
+// Existing clients without the env var see the original layout untouched.
+const useV2Layout = Boolean(TOP_VIDEO_URL)
+
 export default function ThankYouPage() {
+  if (useV2Layout) return <ThankYouV2 />
+  return <ThankYouV1 />
+}
+
+function ThankYouV2() {
+  const followupVideos = [
+    { url: VIDEO_2_URL, title: VIDEO_2_TITLE, subtitle: VIDEO_2_SUBTITLE },
+    { url: VIDEO_3_URL, title: VIDEO_3_TITLE, subtitle: VIDEO_3_SUBTITLE },
+  ].filter((v) => v.url)
+
+  const callinDisplay = CALLIN_DISPLAY || config.phoneDisplay
+  const callinHref = (CALLIN_HREF || config.phoneHref || "").replace(/^tel:/, "")
+  const founderParas = FOUNDER_NOTE.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean)
+
+  return (
+    <main className="relative min-h-screen bg-[#FAFAF9]">
+      {config.logoUrl && (
+        <header className="bg-white border-b border-gray-200">
+          <div className="mx-auto max-w-5xl px-4 py-5 flex items-center justify-between">
+            <div className="relative h-16 md:h-24 w-[200px] md:w-[300px] flex-shrink-0">
+              <Image
+                src={config.logoUrl}
+                alt={config.companyName}
+                fill
+                unoptimized
+                className="object-contain object-left"
+              />
+            </div>
+            <a
+              href={`tel:${callinHref}`}
+              className="hidden sm:inline-flex items-center gap-2 text-sm font-medium text-gray-900 hover:text-black transition-colors"
+            >
+              <Phone className="h-4 w-4" />
+              {callinDisplay}
+            </a>
+          </div>
+        </header>
+      )}
+
+      <section className="bg-white">
+        <div className="mx-auto max-w-3xl px-4 pt-12 pb-8 text-center">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-gray-900">
+            <CheckCircle2 className="h-7 w-7" style={{ color: config.accentColor }} />
+          </div>
+          <h1 className="text-3xl md:text-5xl font-bold tracking-tight text-gray-900 text-balance">
+            Thanks. Your Info Is In.
+          </h1>
+          <p className="mx-auto mt-3 max-w-2xl text-base md:text-lg text-gray-600">
+            Watch the short video below{config.ownerName ? ` from ${config.ownerName}` : ""} so you know exactly what to expect next.
+          </p>
+        </div>
+      </section>
+
+      <section className="bg-white pb-12">
+        <div className="mx-auto max-w-4xl px-4">
+          <div className="mb-4 text-center">
+            <h2 className="text-xl md:text-2xl font-bold text-gray-900">
+              {process.env.NEXT_PUBLIC_THANKYOU_TOP_VIDEO_TITLE || "Thank You for Filling Out the Form"}
+            </h2>
+          </div>
+          <div className="rounded-2xl overflow-hidden shadow-lg border border-gray-200 bg-black">
+            <video
+              src={TOP_VIDEO_URL}
+              autoPlay
+              muted
+              playsInline
+              controls
+              className="w-full block"
+              style={{ aspectRatio: "16/9", objectFit: "cover" }}
+            />
+          </div>
+        </div>
+      </section>
+
+      {callinDisplay && (
+        <section className="bg-gray-900 text-white">
+          <div className="mx-auto max-w-3xl px-4 py-12 md:py-16 text-center">
+            <p
+              className="uppercase tracking-widest text-xs font-semibold mb-3"
+              style={{ color: config.accentColor }}
+            >
+              Important
+            </p>
+            <h2 className="text-2xl md:text-3xl font-bold mb-4 text-balance">
+              Expect a call or text from{" "}
+              <span style={{ color: config.accentColor }}>{callinDisplay}</span>
+            </h2>
+            <p className="text-base md:text-lg text-white/80 max-w-2xl mx-auto">
+              That number is our local team. Save it to your phone so you don't miss us.
+              Prefer to reach out first? Call or text us directly and let us know how you'd like to be contacted.
+            </p>
+            <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3">
+              <a
+                href={`tel:${callinHref}`}
+                className="inline-flex items-center gap-2 rounded-full px-8 py-3 text-base font-semibold text-gray-900 hover:opacity-90 transition-opacity w-full sm:w-auto justify-center"
+                style={{ backgroundColor: config.accentColor }}
+              >
+                <Phone className="h-5 w-5" />
+                Call {callinDisplay}
+              </a>
+              <a
+                href={`sms:${callinHref}`}
+                className="inline-flex items-center gap-2 rounded-full bg-white/10 hover:bg-white/15 ring-1 ring-white/30 px-8 py-3 text-base font-semibold text-white transition-colors w-full sm:w-auto justify-center"
+              >
+                <MessageSquare className="h-5 w-5" />
+                Text Us Instead
+              </a>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {followupVideos.length > 0 && (
+        <section className="bg-[#FAFAF9] py-14 md:py-20">
+          <div className="mx-auto max-w-4xl px-4">
+            <div className="text-center mb-10">
+              <p className="uppercase tracking-widest text-xs font-semibold text-gray-500 mb-2">While You Wait</p>
+              <h2 className="text-2xl md:text-4xl font-bold text-gray-900 text-balance">
+                Quick answers to what most sellers ask next.
+              </h2>
+            </div>
+            <div className="space-y-12">
+              {followupVideos.map((v) => (
+                <div key={v.url}>
+                  {(v.title || v.subtitle) && (
+                    <div className="mb-4 text-center">
+                      {v.title && <h3 className="text-xl md:text-2xl font-bold text-gray-900">{v.title}</h3>}
+                      {v.subtitle && <p className="text-sm md:text-base text-gray-600 mt-1">{v.subtitle}</p>}
+                    </div>
+                  )}
+                  <ClickToPlayVideo src={v.url} title={v.title || "Video"} />
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {founderParas.length > 0 && (
+        <section className="bg-white border-t border-gray-200">
+          <div className="mx-auto max-w-3xl px-4 py-14 md:py-20">
+            <p className="uppercase tracking-widest text-xs font-semibold text-gray-500 mb-3 text-center">
+              A Note From The Founder
+            </p>
+            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 text-center mb-6 text-balance">
+              From {config.ownerName || "Our Founder"}, {config.companyName}
+            </h2>
+
+            {config.headshotUrl && (
+              <div className="flex justify-center mb-6">
+                <div
+                  className="relative h-20 w-20 overflow-hidden rounded-full border-2"
+                  style={{ borderColor: config.accentColor }}
+                >
+                  <Image
+                    src={config.headshotUrl}
+                    alt={config.ownerName || config.companyName}
+                    fill
+                    unoptimized
+                    className="object-cover"
+                  />
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-4 text-gray-700 text-base md:text-lg leading-relaxed">
+              {founderParas.map((p, i) => (
+                <p key={i}>{p}</p>
+              ))}
+              {config.ownerName && (
+                <p>
+                  Talk soon,
+                  <br />
+                  <span className="font-semibold text-gray-900">{config.ownerName}</span>
+                  <br />
+                  <span className="text-sm text-gray-500">Founder, {config.companyName}</span>
+                </p>
+              )}
+            </div>
+
+            <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-3">
+              <a
+                href={`tel:${callinHref}`}
+                className="inline-flex items-center gap-2 rounded-full bg-gray-900 px-8 py-3 text-base font-semibold text-white hover:bg-black transition-colors w-full sm:w-auto justify-center"
+              >
+                <Phone className="h-5 w-5" />
+                Call {callinDisplay}
+              </a>
+              <a
+                href={`sms:${callinHref}`}
+                className="inline-flex items-center gap-2 rounded-full bg-white px-8 py-3 text-base font-semibold text-gray-900 ring-1 ring-gray-300 hover:bg-gray-50 transition-colors w-full sm:w-auto justify-center"
+              >
+                <MessageSquare className="h-5 w-5" />
+                Text Us Instead
+              </a>
+            </div>
+          </div>
+        </section>
+      )}
+
+      <footer className="bg-white border-t border-gray-200 py-8 text-center text-sm text-gray-400">
+        &copy; {new Date().getFullYear()} {config.companyName}. All rights reserved.
+      </footer>
+    </main>
+  )
+}
+
+function ThankYouV1() {
   return (
     <main className="min-h-screen bg-gray-50">
 
@@ -108,7 +336,7 @@ export default function ThankYouPage() {
           <div className="space-y-4">
             {[
               { step: "1", title: "We review your property", desc: "Our team looks at your submission and researches the property." },
-              { step: "2", title: "You get a cash offer", desc: "Within 24 hours, we\u2019ll reach out with a fair, no-obligation offer." },
+              { step: "2", title: "You get a cash offer", desc: "Within 24 hours, we’ll reach out with a fair, no-obligation offer." },
               { step: "3", title: "You choose your closing date", desc: "If you accept, you pick the date. We handle the rest." },
             ].map(({ step, title, desc }) => (
               <div key={step} className="flex gap-4">
