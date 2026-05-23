@@ -1,7 +1,12 @@
 import Image from "next/image"
+import Link from "next/link"
 import { CheckCircle2, Phone, MessageSquare } from "lucide-react"
 import config from "@/lib/config"
 import { ClickToPlayVideo } from "@/components/thankyou/click-to-play-video"
+import { ContactCTA } from "@/components/article/contact-cta"
+import { ARTICLES } from "@/lib/articles"
+
+const RECOMMENDED_READS = ARTICLES.slice(0, 4)
 
 // Per-client env vars (read on the server). All optional — when unset, the
 // page falls back to the original simpler layout so non-ABQ clients are
@@ -310,18 +315,18 @@ function ThankYouV1() {
 
           <div className="space-y-4 text-gray-700 leading-relaxed">
             <p>
-              If you&apos;re reading this, you just took a step that most homeowners put off for months. Maybe years.
-              So before anything else &mdash; we want you to know that was the right call.
+              If you&apos;re reading this, you just took a step that most homeowners put off for months, sometimes years.
+              So before anything else, we want you to know that was the right call.
             </p>
             <p>
               Selling a house is stressful. The uncertainty, the waiting, the feeling like you&apos;re at the mercy of a system
               that wasn&apos;t built for you. Realtors want you to fix everything up, stage the house, wait 90 days,
-              and hope for the best. That works for some people. But not everyone.
+              and hope for the best. That works for some people. It does not work for everyone.
             </p>
             <p>
-              We started {config.companyName} because we kept meeting good people stuck in bad situations. Inherited properties
+              We started {config.companyName} because we kept meeting good people stuck in tough spots. Inherited properties
               they couldn&apos;t afford to keep. Houses that needed more work than they had time or money for. Divorces,
-              job relocations, tax liens &mdash; life happens. And when it does, the last thing you need is someone telling
+              job relocations, tax liens. Life happens. And when it does, the last thing you need is someone telling
               you to repaint your kitchen and &ldquo;list it in the spring.&rdquo;
             </p>
             <p>
@@ -331,6 +336,52 @@ function ThankYouV1() {
             </p>
           </div>
         </div>
+
+        {/* While you wait: advertorial reads */}
+        <div className="rounded-2xl bg-white border border-gray-100 shadow-sm p-6 md:p-8 mb-6">
+          <h3 className="text-lg font-bold text-gray-900 mb-1">While You Wait, a Few Honest Reads</h3>
+          <p className="text-sm text-gray-500 mb-5">
+            Straight talk on the questions almost every homeowner asks before they sell.
+          </p>
+          <div className="grid grid-cols-1 gap-3">
+            {RECOMMENDED_READS.map((a) => (
+              <Link
+                key={a.slug}
+                href={a.slug}
+                className="group flex gap-4 rounded-xl border border-gray-200 p-3 transition-colors hover:bg-gray-50 no-underline"
+              >
+                <Image
+                  src={a.image}
+                  alt={a.title}
+                  width={120}
+                  height={90}
+                  className="h-[72px] w-[96px] sm:h-[84px] sm:w-[112px] shrink-0 rounded-lg object-cover bg-gray-100"
+                />
+                <div className="min-w-0">
+                  <div className="font-bold text-gray-900 leading-snug">{a.title}</div>
+                  <p className="mt-1 text-sm text-gray-500 line-clamp-2">{a.teaser}</p>
+                  <span className="mt-1 inline-block text-sm font-semibold" style={{ color: config.accentColor }}>
+                    Read the article &rarr;
+                  </span>
+                </div>
+              </Link>
+            ))}
+          </div>
+          <div className="mt-4 text-center">
+            <Link href="/articles" className="text-sm font-semibold underline" style={{ color: config.accentColor }}>
+              See all articles
+            </Link>
+          </div>
+        </div>
+
+        {/* Text / call CTA */}
+        <ContactCTA
+          phoneDisplay={config.phoneDisplay}
+          phoneHref={config.phoneHref}
+          smsKeyword={config.smsKeyword}
+          heading="Want your offer faster? Reach us now."
+          subheading="Tap to text us the word OFFER, or call and a local team member will pick up."
+        />
 
         {/* What happens next */}
         <div className="rounded-2xl bg-white border border-gray-100 shadow-sm p-6 md:p-8 mb-8">
