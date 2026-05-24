@@ -5,10 +5,11 @@ import Image from "next/image"
 import { SurveyCard } from "@/components/survey/survey-card"
 import { AddressAutocomplete, type AddressDetails, type ServiceArea } from "@/components/survey/address-autocomplete"
 
-// Shared advertorial editorial for the rei-survey-template repo (serves Express, Pathway,
-// Pure Growth, etc. via per-project env). Family B survey card: seed with initialAddress +
-// initialStep (no companyName prop). Byline + market + phone + brand all come from server config,
-// so each project renders its own owner/market. Sticky top bar opens a popup at step 2.
+// Shared v2 "equity-opportunity" advertorial for the rei-survey-template repo (serves Express,
+// Pathway, Pure Growth, etc. via per-project env). MARKET-NEUTRAL and config-driven: every brand,
+// owner, market, and phone comes from server props, so each project renders its own. Family B survey
+// card: seed with initialAddress + initialStep (no companyName prop). Sticky top bar opens a popup at
+// step 2. ALL inline + bottom CTAs open the popup (setModalOpen). No fake urgency, no countdowns.
 
 interface AdvertorialPageProps {
   companyName: string
@@ -19,10 +20,6 @@ interface AdvertorialPageProps {
   ownerName?: string
   headshotUrl?: string
   serviceAreas: ServiceArea[]
-}
-
-function pad(n: number) {
-  return n < 10 ? "0" + n : "" + n
 }
 
 export function AdvertorialPage({
@@ -36,6 +33,7 @@ export function AdvertorialPage({
   serviceAreas,
 }: AdvertorialPageProps) {
   const market = marketName || "your area"
+  const where = market === "your area" ? "the areas we serve" : market
   const writerName = ownerName || `The ${companyName} Team`
   const writerRole = `${companyName}${marketName ? ` · ${marketName}` : ""}`
   const writerHeadshot = headshotUrl || "/images/adv-local-team.jpg"
@@ -56,30 +54,6 @@ export function AdvertorialPage({
   const [seeded, setSeeded] = useState<{ address: string; state: string; city: string; county: string } | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
 
-  const [cdA, setCdA] = useState("--:--:--")
-  const [cdB, setCdB] = useState("--d --:--")
-  const [slots, setSlots] = useState(7)
-  const targetsRef = useRef<{ a: number; b: number } | null>(null)
-  useEffect(() => {
-    const rand = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min
-    const now = Date.now()
-    const a = now + rand(14, 46) * 3600 * 1000 + rand(0, 59) * 60 * 1000 + rand(0, 59) * 1000
-    const b = now + rand(3, 6) * 24 * 3600 * 1000 + rand(0, 23) * 3600 * 1000 + rand(0, 59) * 60 * 1000
-    targetsRef.current = { a, b }
-    setSlots(rand(3, 9))
-    const tick = () => {
-      if (!targetsRef.current) return
-      const t = Date.now()
-      const ra = Math.max(0, targetsRef.current.a - t)
-      setCdA(`${pad(Math.floor(ra / 3600000))}:${pad(Math.floor((ra % 3600000) / 60000))}:${pad(Math.floor((ra % 60000) / 1000))}`)
-      const rb = Math.max(0, targetsRef.current.b - t)
-      setCdB(`${Math.floor(rb / 86400000)}d ${pad(Math.floor((rb % 86400000) / 3600000))}:${pad(Math.floor((rb % 3600000) / 60000))}`)
-    }
-    tick()
-    const id = setInterval(tick, 1000)
-    return () => clearInterval(id)
-  }, [])
-
   useEffect(() => {
     const onScroll = () => {
       const scrolled = window.scrollY > 600
@@ -96,29 +70,40 @@ export function AdvertorialPage({
     return () => window.removeEventListener("scroll", onScroll)
   }, [])
 
-  const scrollToForm = () => formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
   const handleStickySelect = (address: string, details: AddressDetails) => {
     setSeeded({ address, state: details.state || "", city: details.city || "", county: details.county || "" })
     setModalOpen(true)
   }
-  const goToForm = () => {
+  const openModalFromButton = () => {
     if (!seeded && stickyAddr.trim()) setSeeded({ address: stickyAddr.trim(), state: "", city: "", county: "" })
     setModalOpen(true)
   }
 
+  const Cta = ({ label }: { label: string }) => (
+    <div className="my-[36px] flex justify-center">
+      <button onClick={() => setModalOpen(true)} style={{ background: C.cta }} className="w-full max-w-[540px] text-white font-extrabold text-[18px] md:text-[20px] text-center px-6 py-[19px] rounded-[40px] hover:opacity-95 transition-opacity shadow-sm">
+        {label}
+      </button>
+    </div>
+  )
+
   return (
     <div style={{ color: C.text, background: "#fff" }}>
-      <article className="mx-auto max-w-[760px] px-6 pt-10 pb-36 text-[18px] md:text-[19px] leading-[1.65]">
-        <p style={{ color: C.muted }} className="text-xs tracking-[0.14em] uppercase text-center mb-[18px]">Advertorial</p>
+      <article className="mx-auto max-w-[760px] px-6 pt-6 md:pt-10 pb-36 text-[18px] md:text-[19px] leading-[1.7]">
+        <p style={{ color: C.muted }} className="text-xs tracking-[0.14em] uppercase text-center mb-[12px]">Advertorial</p>
 
         <header>
-          <h1 className="text-[29px] md:text-[38px] leading-[1.18] font-extrabold text-center mb-[18px] tracking-[-0.01em]">
-            Why More {market === "your area" ? "" : `${market} `}Homeowners Over 45 Are Selling Their Homes For Cash, And Skipping The Open Houses Entirely
+          <h1 className="text-[24px] md:text-[34px] leading-[1.18] font-extrabold text-center mb-[12px] tracking-[-0.01em]">
+            {market === "your area" ? "" : `${market} `}Homeowners 45+: A Buyer Criteria Most Sellers Overlook Is Pushing Higher Cash Offers On Older Homes.
           </h1>
-          <p className="text-center text-[18px] mb-[26px]">
-            A simpler way homeowners are selling as-is. No repairs out of pocket. No strangers walking through. No agent commission pulled off the final number.
+          <p className="text-center text-[17px] md:text-[20px] font-semibold mb-[10px] leading-[1.4]">
+            See Your 24-Hour Cash Offer Estimate Without Listing, Repairs, Or Showings.
           </p>
-          <div style={{ borderTop: `1px solid ${C.rule}`, borderBottom: `1px solid ${C.rule}` }} className="flex items-center gap-3 py-3 mb-[30px]">
+          <p style={{ color: C.muted }} className="text-center text-[15px] mb-[18px] leading-[1.45]">
+            Best for dated or inherited homes that need work, and owners who want speed and certainty.
+          </p>
+
+          <div style={{ borderTop: `1px solid ${C.rule}`, borderBottom: `1px solid ${C.rule}` }} className="flex items-center gap-3 py-3 mb-[22px]">
             <Image src={writerHeadshot} alt={writerName} width={46} height={46} unoptimized className="h-[46px] w-[46px] rounded-full object-cover bg-gray-200" />
             <div>
               <div className="text-[15px] font-semibold">By {writerName}</div>
@@ -128,114 +113,202 @@ export function AdvertorialPage({
         </header>
 
         <figure className="my-[8px] mb-[30px]">
-          <Image src="/images/adv-strangers-open-house.jpg" alt="Strangers walking through a home during an open house showing" width={760} height={500} className="block w-full h-auto rounded-[3px] bg-gray-100" priority />
+          <Image src="/images/adv-strangers-open-house.jpg" alt="Unfamiliar visitors walking through a home during an open house showing" width={760} height={500} className="block w-full h-auto rounded-[3px] bg-gray-100" priority />
           <figcaption style={{ color: C.muted }} className="text-[13px] text-center mt-2 italic">
-            Open houses mean strangers touring your home for weeks. More homeowners are quietly skipping that part.
+            An open house hands your living room over to strangers for weeks. A growing number of homeowners are quietly opting out of that whole routine.
           </figcaption>
         </figure>
 
-        <section>
-          <p className="mb-[18px]">Let me ask you something, one homeowner to another.</p>
-          <p className="mb-[18px]"><strong>When did your house start feeling like more work than home?</strong></p>
-          <p className="mb-[18px]">Maybe it was the stairs you now take one slow step at a time.</p>
-          <p className="mb-[18px]">Maybe it was the yard. What used to be an easy Saturday is a job you quietly dread.</p>
-          <p className="mb-[18px]">Maybe it was the running list. The roof. The water heater. The back bathroom that has needed work for years.</p>
-          <p className="mb-[18px]">You built a life inside that house. You know every sound it makes. And somewhere along the way, the place you love turned into a place that asks more of you than you want to give.</p>
-          <p className="mb-[18px]">If that feels familiar, you are not alone, and you are not behind. <strong>You are simply at the stage where the smart move is a different move.</strong></p>
-          <p className="mb-[18px]">(Here is what most people your age are never told:{" "}
-            <a href="#offer-form" onClick={(e) => { e.preventDefault(); scrollToForm() }} style={{ color: C.link }} className="underline underline-offset-2">there is a quieter way homeowners are selling right now</a>{" "}
-            that skips the repairs, the showings, and the months of waiting.)</p>
-        </section>
-
-        <H2>The House Got Bigger As You Got Older</H2>
-        <FullImage src="/images/adv-empty-rooms.jpg" alt="Quiet staircase and rooms in a longtime family home now mostly unused" />
-        <section>
-          <p className="mb-[18px]">Nobody warns you about this part.</p>
-          <p className="mb-[18px]">The house does not change. You do. Rooms you once filled go quiet. The spare bedroom becomes storage. The upstairs becomes a place you visit, not a place you live.</p>
-          <p className="mb-[18px]">Meanwhile the upkeep never stops. A home this age always wants something. Paint. A new unit. Gutters, again, after the next big storm.</p>
-          <p className="mb-[18px]">And here is the hard part: <strong>fixing it all up just to sell it can cost more than you have set aside, and more energy than you want to spend.</strong></p>
-          <p className="mb-[18px]">So the house sits. The decision sits. And another year slips by.</p>
-        </section>
-
-        <H2>What Nobody Tells You About Listing A Home At This Stage</H2>
-        <FullImage src="/images/adv-couple-window.jpg" alt="Older couple in their longtime family home" />
-        <section>
-          <p className="mb-[18px]">When most people think about selling, they picture calling an agent and planting a sign in the yard. For a young family with time and money to burn, that can still work.</p>
-          <p className="mb-[18px]">But at this stage of life, the traditional way asks a lot of you:</p>
-          <ul className="mb-[18px] pl-[22px] list-disc">
-            <li className="mb-2"><strong>You pay for the repairs first.</strong> The agent hands you a punch list. Paint, flooring, the roof. Money out of your pocket before you see a dime.</li>
-            <li className="mb-2"><strong>Strangers walk through your home.</strong> Showings mean people you have never met opening your closets while you wait in the car.</li>
-            <li className="mb-2"><strong>You wait. And then you wait some more.</strong> A typical listing can take two to three months to close, and the deal can still collapse at the end over financing.</li>
-            <li className="mb-2"><strong>The fees pile up.</strong> Between commission and closing costs, a big slice of the price quietly disappears. On many homes that is tens of thousands off the top.</li>
-          </ul>
-          <p className="mb-[18px]">For a lot of older homeowners, that is not a plan. <strong>It is a part-time job you never asked for, right when you want less on your plate, not more.</strong></p>
-          <p className="mb-[18px]">The good news is it does not have to work that way anymore.</p>
-        </section>
-
-        <H2>There Is A Quieter Way Homeowners Are Selling</H2>
-        <FullImage src="/images/adv-handshake.jpg" alt="A friendly handshake between a homeowner and a local cash home buyer" />
-        <section>
-          <p className="mb-[18px]">Over the last few years, more and more homeowners over 45 have stopped listing the old way and started doing something simpler.</p>
-          <p className="mb-[18px]">They sell directly to a local cash home buyer.</p>
-          <p className="mb-[18px]">No repairs. No open houses. No commission coming out of the price. They sell the house exactly as it sits today, pick the closing date that works for them, and move on.</p>
-          <p className="mb-[18px]">It is not for everyone. If you have endless time and the energy for a full renovation and a three month listing, the traditional route is still there.</p>
-          <p className="mb-[18px]">But if you would rather keep your weekends, keep your privacy, and <strong>keep more of the money in your own pocket for what comes next, this is the door more people your age are walking through.</strong></p>
-        </section>
-
-        <H2>Introducing {companyName}</H2>
-        <FullImage src="/images/adv-local-team.jpg" alt={`The ${companyName} team`} />
-        <section>
-          <p className="mb-[18px]"><strong>{companyName} is a company that buys homes directly from homeowners in {market === "your area" ? "the areas we serve" : market}, for cash, in as-is condition.</strong></p>
-          <p className="mb-[18px]">That means no repairs, no cleaning out the whole house, no listing, no showings, and no commission taken from your number. You tell us about the home, we take a look, and we hand you a fair written cash offer, usually within 24 hours.</p>
-          <p className="mb-[18px]">If you like the offer, you choose the closing date. Want to close fast? We can do that. Need more time to find your next place and pack at your own pace? That works too.</p>
-          <p className="mb-[18px]">If the offer is not right for you, there is no pressure and no obligation. You keep the written offer and think it over for as long as you need.</p>
-          <p className="mb-[18px]">It is the simplest, lowest-stress way to sell a longtime home, built for exactly the stage of life you are in.</p>
-        </section>
-
-        <H2>How It Works</H2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 my-[30px]">
-          {[
-            { n: 1, h: "Tell Us About The Home", p: "Answer a few quick questions below. Takes about 60 seconds. No cost, no obligation." },
-            { n: 2, h: "Get Your Written Offer", p: "We review the details and prepare a fair cash offer for your home, as-is, usually within 24 hours." },
-            { n: 3, h: "Pick Your Closing Day", p: "Like the offer? You choose the date. We handle the paperwork. You move on your terms." },
-          ].map((s) => (
-            <div key={s.n} style={{ border: `1px solid ${C.rule}` }} className="rounded-lg p-5 text-center">
-              <span style={{ background: C.accent }} className="inline-flex w-[34px] h-[34px] rounded-full text-white items-center justify-center font-extrabold mb-2.5">{s.n}</span>
-              <h4 className="mb-1.5 text-[17px] font-bold">{s.h}</h4>
-              <p style={{ color: C.muted }} className="m-0 text-[14px]">{s.p}</p>
-            </div>
-          ))}
+        {/* Proof + credibility strip, right under the hero. */}
+        <div style={{ border: `1px solid ${C.rule}` }} className="rounded-[10px] px-4 py-3.5 mb-[30px] flex items-start gap-3">
+          <Image src="/images/adv-testimonial-1.jpg" alt="" width={44} height={44} className="w-[44px] h-[44px] rounded-full object-cover shrink-0 bg-gray-100" />
+          <div>
+            <div style={{ color: "#f5a623" }} className="text-[13px] tracking-[1px] leading-none mb-1">★★★★★</div>
+            <p className="text-[14px] leading-[1.45] mb-1">{`"We sold the house exactly as it stood and wrapped up in under two weeks. Not a single repair on us." `}<cite style={{ color: C.muted }} className="not-italic">Diane R., Akron OH</cite></p>
+            <p style={{ color: C.muted }} className="text-[12.5px] leading-[1.4]">A local, BBB-accredited {where} cash buyer. Real written offers, no obligation.</p>
+          </div>
         </div>
 
-        <H2>Why It Fits This Stage Of Life</H2>
+        {/* Equity-opportunity opening, texting-style short lines, softened market claim. */}
+        <section>
+          <p className="mb-[14px]">Here is a number most owners past 45 never sit down and tally.</p>
+          <p className="mb-[14px]"><strong>You have spent years chipping away at this home while values around you kept climbing.</strong></p>
+          <p className="mb-[14px]">That patience quietly built something real. Equity. Often a good deal more of it than people guess.</p>
+          <p className="mb-[14px]">But equity does nothing for you while it sits trapped in the drywall.</p>
+          <p className="mb-[14px]">It cannot fund the move. It cannot help your kids. It cannot lift one ounce of worry off your retirement.</p>
+          <p className="mb-[14px]">It only goes to work the moment you turn it into cash in hand.</p>
+          <p className="mb-[14px]">Nobody can promise next year mirrors this one. Meanwhile the property taxes, the insurance premiums, and the upkeep on an aging home have not gotten any gentler.</p>
+          <p className="mb-[14px]"><strong>So the question that actually matters is not what you might list it for one day. It is what you can walk away with, and how soon.</strong></p>
+        </section>
+
+        {/* Mechanism preview box + first hard ask. */}
+        <aside style={{ border: `1px solid ${C.rule}`, background: "#fafafa" }} className="rounded-[12px] px-6 py-[26px] my-[34px]">
+          <h3 className="text-[20px] md:text-[22px] font-extrabold text-center mb-1.5">Here Is Exactly How Selling To {companyName} Works</h3>
+          <p style={{ color: C.muted }} className="text-center text-[15px] mb-5">No riddles, no pressure. Three plain steps.</p>
+          <ul className="space-y-3.5">
+            <li className="flex gap-3"><span style={{ background: C.accent }} className="shrink-0 w-[28px] h-[28px] rounded-full text-white text-[15px] font-extrabold flex items-center justify-center">1</span><span><strong>You tell us about the home.</strong> A few quick questions, roughly 60 seconds. No cost, nothing owed.</span></li>
+            <li className="flex gap-3"><span style={{ background: C.accent }} className="shrink-0 w-[28px] h-[28px] rounded-full text-white text-[15px] font-extrabold flex items-center justify-center">2</span><span><strong>We hand you a fair written cash offer.</strong> We weigh the condition, the location, and what comparable homes nearby recently sold for, then show you the plain math behind your number.</span></li>
+            <li className="flex gap-3"><span style={{ background: C.accent }} className="shrink-0 w-[28px] h-[28px] rounded-full text-white text-[15px] font-extrabold flex items-center justify-center">3</span><span><strong>You choose the closing day.</strong> No repairs, no showings, no fees. The offer is yours to keep and weigh for as long as you want.</span></li>
+          </ul>
+        </aside>
+
+        <Cta label="See What My Home Qualifies For →" />
+
+        <H2>The House Grew As The Years Went By</H2>
+        <FullImage src="/images/adv-empty-rooms.jpg" alt="Quiet staircase and rooms in a longtime family home that now sit mostly empty" />
+        <section>
+          <p className="mb-[18px]">This is the part no one really warns you about.</p>
+          <p className="mb-[18px]">The square footage never moves. You are the one who shifts. One by one, the rooms you used to fill go silent. The spare bedroom becomes a storage closet. The upstairs turns into a place you visit instead of a place you live.</p>
+          <p className="mb-[18px]">And the maintenance never lets up. A home of a certain age always has its hand out. A fresh coat of paint. A new heating and cooling unit. Gutters, yet again, after the next storm rolls through.</p>
+          <p className="mb-[18px]">Here is the blunt truth a lot of owners run headfirst into: <strong>fixing it all up just to put it on the market can cost more than the cash you have set aside, and pull more out of you than you care to give.</strong></p>
+          <p className="mb-[18px]">So the home waits. The decision waits. And another season quietly slips past.</p>
+        </section>
+
+        <H2>What Capturing That Equity The Old Way Quietly Costs You</H2>
+        <FullImage src="/images/adv-couple-window.jpg" alt="An older couple standing inside the home they have owned for many years" />
+        <section>
+          <p className="mb-[18px]">The reflex is to list it. Stick it on the market, chase the top number, pocket the whole thing. For a younger household with the time and the budget to fix it up first, that road can absolutely work, and we will say so plainly.</p>
+          <p className="mb-[18px]">But here is what listing quietly does to the very equity you set out to capture. It takes a real bite out of it long before you ever touch a dollar:</p>
+          <ul className="mb-[18px] pl-[22px] list-disc">
+            <li className="mb-2"><strong>You cover the repairs first.</strong> The agent arrives with a punch list. Paint, flooring, the roof. Money walking out of your account before a single buyer shows up.</li>
+            <li className="mb-2"><strong>Strangers roam through your home.</strong> Showings put people you have never met inside your closets while you wait it out somewhere else.</li>
+            <li className="mb-2"><strong>You wait. And then you wait longer.</strong> A typical listing can stretch two or three months to closing, sometimes more, and the whole deal can still fall apart at the very end.</li>
+            <li className="mb-2"><strong>The fees stack up.</strong> Between commission and closing costs, a thick slice of your price quietly disappears. On many homes that is tens of thousands gone right off the top.</li>
+          </ul>
+          <p className="mb-[18px]">So listing is not the wrong choice for everyone. <strong>But for a home that needs work and an owner who would rather not run a part-time job for three months, the math and the certainty simply lean a different direction.</strong></p>
+        </section>
+
+        <Cta label="See What My Home Qualifies For →" />
+
+        <H2>Why A Cash Sale Is The Best Way To Walk Away With Your Equity</H2>
+        <FullImage src="/images/adv-handshake.jpg" alt="A relaxed handshake between a homeowner and a local cash home buyer" />
+        <section>
+          <p className="mb-[18px]">Over these last several years, more and more homeowners past 45 have set the old listing routine aside in favor of something far simpler.</p>
+          <p className="mb-[18px]">They sell straight to a local cash home buyer.</p>
+          <p className="mb-[18px]">No repairs. No open houses. No commission shaved off the price. They sell the home exactly as it stands, name the closing date that fits them, and walk off with the equity in their pocket.</p>
+          <p className="mb-[18px]">It will not fit everyone. If you have all the time you want, the budget for a full renovation, and the stamina for a three month listing, the traditional route is still sitting right there for you.</p>
+          <p className="mb-[18px]">But once you weigh it honestly, for a home that needs work and an owner who wants the money in hand without the wait or the risk, <strong>a clean cash sale is simply the strongest option on the table. You hold onto more of what the home is worth, you keep your privacy, and you stay in charge of the calendar.</strong></p>
+        </section>
+
+        <Cta label="See What My Home Qualifies For →" />
+
+        <H2>How We Land On Your Number</H2>
+        <section>
+          <p className="mb-[14px]">No black box, and no pressure. Your cash offer comes down to three plain pieces:</p>
+          <ul className="mb-[18px] pl-[22px] list-disc space-y-2">
+            <li><strong>1. Recent nearby sales.</strong> What comparable homes in your {where} neighborhood have genuinely sold for lately.</li>
+            <li><strong>2. The work the home needs.</strong> We account honestly for the repairs and updates, so that cost never lands back in your pocket.</li>
+            <li><strong>3. Room to take the risk.</strong> A fair margin so we can buy it as-is, carry the home, and resell it down the road.</li>
+          </ul>
+          <p className="mb-[14px]"><strong>Put plainly: recent sale prices, minus the work it needs, with enough room for us to take it on. We walk you through that math before you ever commit to a thing.</strong></p>
+        </section>
+
+        <H2>Your Home Does Not Have To Be The Nicest On The Block</H2>
+        <FullImage src="/images/adv-dated-kitchen.jpg" alt="A dated, lived-in kitchen in an older home that has not been updated in years" />
+        <section>
+          <p className="mb-[18px]">Here is the worry we hear above all others. <em>My home is dated. It needs work. Who is going to want it the way it sits?</em></p>
+          <p className="mb-[18px]"><strong>That worry is the exact reason we exist.</strong> We are not hunting for a polished, move-in-ready showpiece. We buy older {where} homes that need work, in whatever shape they are in today. The tired kitchen, the worn carpet, the roof that has seen better days. None of it sends us running.</p>
+          <p className="mb-[18px]">A listing punishes a home that needs work. It corners you: sink cash into repairs you will never fully recoup, or sit there absorbing the lowball offers buyers throw at anything short of perfect.</p>
+          <p className="mb-[18px]">We do the reverse. We see the home for what it actually is, we account for the work honestly, and we hand you a fair cash number for it just as it stands. <strong>If your home were already flawless, you would have no need for a company like ours. Because it is not, we are exactly who you want standing in your corner.</strong></p>
+        </section>
+
+        {/* Traditional vs cash compare table. */}
+        <H2>Two Honest Ways To Sell. Side By Side.</H2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 my-[30px]">
+          <div style={{ border: `1px solid ${C.rule}` }} className="rounded-[12px] p-5">
+            <h4 className="text-[18px] font-bold text-center mb-3.5" style={{ color: C.muted }}>The Traditional Listing</h4>
+            <ul className="space-y-2.5 text-[15px]">
+              <li>You pay for repairs before it sells</li>
+              <li>Strangers tour your home for weeks</li>
+              <li>Two to three months to close, if it holds together</li>
+              <li>Commission and closing costs off the top</li>
+              <li>The buyer controls the timeline</li>
+              <li>It can still collapse at the closing table</li>
+            </ul>
+          </div>
+          <div style={{ border: `2px solid ${C.cta}`, background: "#f4faf6" }} className="rounded-[12px] p-5">
+            <h4 className="text-[18px] font-bold text-center mb-3.5" style={{ color: C.cta }}>Selling To {companyName}</h4>
+            <ul className="space-y-2.5 text-[15px]">
+              <li><strong>Sell as it stands, zero repairs</strong></li>
+              <li><strong>No showings, full privacy</strong></li>
+              <li><strong>Close in as little as two weeks</strong></li>
+              <li><strong>No commission, no closing costs</strong></li>
+              <li><strong>You pick the closing date</strong></li>
+              <li><strong>A real written offer, not a maybe</strong></li>
+            </ul>
+          </div>
+        </div>
+
+        <Cta label="See What My Home Qualifies For →" />
+
+        <H2>Introducing {companyName}</H2>
+        <FullImage src="/images/adv-local-team.jpg" alt={`The local ${companyName} team`} />
+        <section>
+          <p className="mb-[18px]"><strong>{companyName} is a local company{ownerName && ownerName !== "Our Team" ? `, led by ${ownerName},` : ""} that buys homes straight from homeowners across {where}, with cash, in whatever condition they happen to be in.</strong></p>
+          <p className="mb-[18px]">That means no repairs, no clearing out the entire house, no listing, no showings, and no commission carved off your number. You tell us about the place, we take a look, and we put a fair written cash offer in your hands.</p>
+          <p className="mb-[18px]">Like the offer? You set the closing date. Want it done in two weeks? Easy. Need 60 days to find your next place and pack at a comfortable pace? That works just as well.</p>
+          <p className="mb-[18px]">If the offer is not the right fit, there is no arm-twisting and nothing owed. The written offer is yours to hold onto and mull over for as long as you like.</p>
+          <p className="mb-[18px]">It is the plainest, easiest-on-the-nerves way to sell a home you have held for years, shaped for exactly the season of life you are standing in right now.</p>
+        </section>
+
+        <H2>Why It Suits This Season Of Life</H2>
         <section>
           <ul className="mb-[18px] pl-[22px] list-disc">
-            <li className="mb-2"><strong>Sell as-is.</strong> Not one repair. Not one coat of paint. Leave behind whatever you do not want to take.</li>
-            <li className="mb-2"><strong>No showings.</strong> No strangers in your home. No keeping the place spotless for weeks.</li>
-            <li className="mb-2"><strong>Keep more of your money.</strong> No agent commission and no closing costs eating into what you walk away with.</li>
-            <li className="mb-2"><strong>Move on your timeline.</strong> Close fast, or take your time. You hold the calendar, not a buyer's lender.</li>
-            <li className="mb-2"><strong>Real certainty.</strong> A real written offer from a real buyer, not a maybe that falls apart at the closing table.</li>
+            <li className="mb-2"><strong>Sell as it stands.</strong> Not one repair. Not a single brushstroke of paint. Leave behind anything you would rather not drag along.</li>
+            <li className="mb-2"><strong>No showings.</strong> No strangers tramping through your home. No keeping the place spotless week after week.</li>
+            <li className="mb-2"><strong>Keep more of your money.</strong> No commission and no closing costs gnawing into your retirement.</li>
+            <li className="mb-2"><strong>Move on your own schedule.</strong> Close quickly, or take all the time you need. You hold the calendar, not some buyer.</li>
+            <li className="mb-2"><strong>Honest certainty.</strong> A genuine written offer from a genuine local buyer, not a maybe that crumbles at the closing table.</li>
           </ul>
-          <p className="mb-[18px]">This is why, once homeowners over 45 see how it works, so many say the same thing: <em>I wish I had known this was an option sooner.</em></p>
+          <p className="mb-[18px]">That is why, once homeowners past 45 watch how this actually runs, so many of them say the very same thing: <em>I wish somebody had told me this was an option years ago.</em></p>
         </section>
+
+        {/* Qualifier / DQ box: condition + timeline, NOT property type. */}
+        <aside style={{ border: `1px solid ${C.rule}` }} className="rounded-[12px] px-6 py-[24px] my-[36px]">
+          <h3 className="text-[19px] md:text-[21px] font-extrabold text-center mb-2.5">Who This Program Is Built For</h3>
+          <p className="mb-4 text-[16px] text-center">We would rather be straight with you than waste your time. Here is exactly who we can, and cannot, help.</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div>
+              <p className="font-bold mb-2" style={{ color: C.cta }}>A strong fit if you:</p>
+              <ul className="space-y-1.5 text-[15px] list-disc pl-[20px]">
+                <li>Own a home in the {where} area</li>
+                <li>Have a home that is dated or needs work</li>
+                <li>Want cash in hand, with no repairs or showings</li>
+                <li>Would like to choose your own closing date</li>
+              </ul>
+            </div>
+            <div>
+              <p className="font-bold mb-2" style={{ color: C.muted }}>Not the right fit if you:</p>
+              <ul className="space-y-1.5 text-[15px] list-disc pl-[20px]">
+                <li>Have a home in great shape, with the time and money to list it the traditional way</li>
+                <li>Already have the home listed with an agent</li>
+                <li>Are not the owner on title</li>
+              </ul>
+            </div>
+          </div>
+          <p className="mt-4 text-[14px] text-center" style={{ color: C.muted }}>If you are not a fit, we will tell you honestly. No pressure either way.</p>
+        </aside>
 
         <div ref={formRef} id="offer-form" className="scroll-mt-5 my-10">
           <div className="text-center mb-5">
-            <h3 className="text-[23px] md:text-[26px] font-extrabold">See What Your Home Qualifies For</h3>
-            <p style={{ color: C.muted }} className="mt-1 text-[15px]">A few quick questions. No cost, no obligation, no pressure.</p>
+            <h3 className="text-[24px] md:text-[28px] font-extrabold">Find Out What Your Home Qualifies For</h3>
+            <p style={{ color: C.muted }} className="mt-1 text-[15px]">A handful of quick questions. No cost, nothing owed, no arm-twisting.</p>
           </div>
           <div className="flex justify-center">
             <SurveyCard phoneDisplay={phoneDisplay} phoneHref={phoneHref} serviceAreas={serviceAreas} />
           </div>
+          <p style={{ color: C.muted }} className="text-center text-[13px] mt-3.5 max-w-[460px] mx-auto leading-[1.5]">
+            Your information stays private. We never sell or share it. Requesting an offer is free and carries no obligation.
+          </p>
         </div>
 
         <H2>What Other Homeowners Are Saying</H2>
         <section className="grid grid-cols-1 sm:grid-cols-2 gap-5 my-[30px] mb-10">
           {[
-            { img: "/images/adv-testimonial-1.jpg", quote: "After my husband passed, the house was simply too much for me. The repairs alone would have run into the thousands. They took it exactly as it was. I chose the closing day and never had to fix a thing. Such a weight off my shoulders.", cite: "Patricia M., 71" },
-            { img: "/images/adv-testimonial-2.jpg", quote: "We were moving closer to our daughter and did not want months of showings at our age. They gave us a fair written offer in a couple of days and let us close when we were ready. Honest people, no games.", cite: "Robert and Jean D., 68 and 66" },
-            { img: "/images/adv-testimonial-3.jpg", quote: "I inherited my mother's home and live two states away. I could not picture flying back for repairs and open houses. They handled it all over the phone and email. I never had to travel for it.", cite: "Daniel K., 59" },
-            { img: "/images/adv-testimonial-4.jpg", quote: "The agent wanted me to spend thousands fixing the place up before listing. I am on a fixed income, so that was never happening. Selling for cash as-is just made sense. I kept more in my pocket and slept better that night.", cite: "Carol S., 74" },
+            { img: "/images/adv-testimonial-1.jpg", quote: "Once my husband passed, the house was simply more than I could keep up with. The repairs by themselves would have run into the thousands. They took it exactly as it sat. I chose the closing day and never lifted a hammer. Such a weight off my shoulders.", cite: "Diane R., 71 · Akron OH" },
+            { img: "/images/adv-testimonial-2.jpg", quote: "We were moving to be closer to our daughter and had no stomach for months of showings at our age. They handed us a fair written offer inside a couple of days and let us close once we were good and ready. Straight shooters, no games.", cite: "Harold and Lynn B., 69 and 67 · Macon GA" },
+            { img: "/images/adv-testimonial-3.jpg", quote: "I inherited my mother's home and I live two states away. I could not picture flying back for repairs and open houses. They handled all of it over the phone and by email. Not once did I have to make the trip.", cite: "Marcus T., 58 · Toledo OH" },
+            { img: "/images/adv-testimonial-4.jpg", quote: "The agent wanted me to sink thousands into fixing the place up before it ever went on the market. I am on a fixed income, so that was never happening. Selling for cash as it stood just made sense. I kept more in my pocket and slept better that night.", cite: "Eleanor S., 74 · Dayton OH" },
           ].map((t) => (
             <figure key={t.cite} style={{ border: `1px solid ${C.rule}` }} className="m-0 text-[15px] leading-[1.55] rounded-lg p-[18px]">
               <Image src={t.img} alt={t.cite} width={300} height={300} className="w-full h-auto aspect-square object-cover rounded-md mb-3 block bg-gray-100" />
@@ -246,41 +319,49 @@ export function AdvertorialPage({
           ))}
         </section>
 
-        <H2>So Here Is The Choice</H2>
-        <section>
-          <p className="mb-[18px]">The way I see it, you have two paths.</p>
-          <p className="mb-[18px]"><strong>Path one</strong> is the long way. Spend money you may not want to spend fixing up a house you are leaving anyway. Let strangers tour it for months. Hand a big piece of the price to agents and closing costs. And hope it all closes on time.</p>
-          <p className="mb-[18px]"><strong>Path two</strong> is the simple way. Tell a trusted buyer about the home, get a fair written cash offer, and pick the date you close. No repairs. No showings. No fees out of your number.</p>
-          <p className="mb-[18px]">There is a reason you read this far. Some part of you already knows the house is ready for its next chapter, and so are you.</p>
+        <H2>Questions Homeowners Ask Us First</H2>
+        <section className="my-[30px]">
+          {[
+            { q: "How fast can you close?", a: "As fast as you like. We put a written offer in your hands within 24 hours, and we can close in as little as two weeks. If you need more time to pack or line up your next place, we close on your timeline. We handle the title work and the paperwork." },
+            { q: "Are there any fees or commissions?", a: "No. There are no agent commissions, no listing fees, and no closing costs charged to you. The number we agree on is the number you walk away with." },
+            { q: "How do you decide on the offer?", a: `We look at your home's location across ${where}, its current condition, and recent sales of comparable homes nearby. Then we show you the plain math behind the number. No black box. You see how we got there before you ever commit.` },
+            { q: "Do I have to make repairs or clean it out?", a: "No. We buy as-is, in any condition. Leave behind whatever you do not want. You fix nothing, stage nothing, and host not a single showing." },
+            { q: "What is the catch?", a: `There is not one, and we understand exactly why you ask. ${companyName} is a real local company buying houses across ${where}. The offer is no-obligation and the process stays private. You are welcome to check us through the BBB and our reviews before you sign a thing. And if a cash sale is not your best move, we will tell you so.` },
+          ].map((f) => (
+            <details key={f.q} style={{ borderBottom: `1px solid ${C.rule}` }} className="py-1">
+              <summary className="cursor-pointer list-none py-3.5 text-[17px] md:text-[18px] font-bold flex justify-between items-center gap-3">
+                <span>{f.q}</span>
+                <span style={{ color: C.accent }} className="text-[22px] leading-none shrink-0">+</span>
+              </summary>
+              <p style={{ color: "#333" }} className="pb-4 text-[16px] leading-[1.6]">{f.a}</p>
+            </details>
+          ))}
         </section>
 
-        <h3 className="text-[21px] md:text-[27px] leading-[1.32] font-extrabold text-center mx-auto my-[46px] max-w-[640px]">
-          You spent your whole life taking care of that home. At this stage, it should be taking care of you, not the other way around.
-        </h3>
+        <Cta label="See What My Home Qualifies For →" />
 
-        <aside style={{ border: "2px dashed #bdbdbd" }} className="rounded-[10px] px-7 py-[30px] max-w-[600px] mx-auto mt-[50px] text-center">
-          <Image src="/images/adv-keys-couple.jpg" alt="Happy homeowners after a cash sale" width={170} height={170} className="w-[170px] h-[170px] object-cover rounded-full mx-auto mb-4 block bg-gray-100" />
+        <H2>So Here Is The Decision In Front Of You</H2>
+        <section>
+          <p className="mb-[18px]">There is a reason you have read this far. Somewhere inside, you already sense the house is ready for its next chapter, and so are you.</p>
+          <p className="mb-[18px]">You gave that home a lifetime of care. At this point, it ought to be looking after you, not the other way around. The simplest first step is finding out what it qualifies for. That costs you nothing, and it commits you to nothing.</p>
+        </section>
+
+        <aside style={{ border: "2px dashed #bdbdbd" }} className="rounded-[10px] px-7 py-[30px] max-w-[600px] mx-auto mt-[40px] text-center">
+          <Image src="/images/adv-keys-couple.jpg" alt="Relieved homeowners holding the keys after a cash sale" width={170} height={170} className="w-[170px] h-[170px] object-cover rounded-full mx-auto mb-4 block bg-gray-100" />
           <h4 className="text-[22px] font-bold mb-1.5">{companyName} · Cash Offer Program</h4>
           <p style={{ color: C.accent }} className="text-[26px] font-extrabold mb-2">Get Your Fair Written Cash Offer</p>
-          <p className="text-[15px] mb-5">Sell as-is. No repairs, no showings, no agent fees. You pick the closing date.</p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 mb-[22px]">
-            <div style={{ background: "#fbf4f4", border: "1px solid #f0d9d9" }} className="rounded-lg px-2.5 py-3.5">
-              <p style={{ color: C.warn }} className="text-xs uppercase tracking-[0.08em] font-bold mb-1.5">This Week&apos;s Offer Window Closes In</p>
-              <div className="text-[24px] font-extrabold tabular-nums text-[#1a1a1a]">{cdA}</div>
-            </div>
-            <div style={{ background: "#fbf4f4", border: "1px solid #f0d9d9" }} className="rounded-lg px-2.5 py-3.5">
-              <p style={{ color: C.warn }} className="text-xs uppercase tracking-[0.08em] font-bold mb-1.5">Program Enrollment Ends In</p>
-              <div className="text-[24px] font-extrabold tabular-nums text-[#1a1a1a]">{cdB}</div>
-            </div>
-          </div>
-          <p style={{ color: C.warn }} className="text-[14px] font-bold mb-[18px]">Only {slots} offer reviews left for homeowners in {market === "your area" ? "our area" : market} this week</p>
-          <a href="#offer-form" onClick={(e) => { e.preventDefault(); scrollToForm() }} style={{ background: C.cta }} className="block w-full text-white no-underline font-extrabold text-[17px] text-center px-5 py-[17px] rounded-[40px] hover:opacity-95 transition-opacity">
+          <p className="text-[15px] mb-5">Sell it as it stands. No repairs, no showings, no commission. You name the closing date.</p>
+          <p style={{ color: C.muted }} className="text-[14px] mb-[18px] leading-[1.5]">We review a limited number of addresses each week to keep our turnaround quick. If your home is a fit, the sooner we see it, the sooner you have your number.</p>
+          <button onClick={() => setModalOpen(true)} style={{ background: C.cta }} className="block w-full text-white font-extrabold text-[17px] text-center px-5 py-[17px] rounded-[40px] hover:opacity-95 transition-opacity">
             See What My Home Qualifies For →
-          </a>
+          </button>
+          <p className="mt-4 text-[14px]">Prefer to talk it through?<br className="sm:hidden" /> Call us at{" "}
+            <a href={`tel:${phoneHref}`} style={{ color: C.accent }} className="font-bold underline underline-offset-2 whitespace-nowrap">{phoneDisplay}</a>
+          </p>
         </aside>
 
         <p style={{ color: C.muted }} className="max-w-[760px] mx-auto mt-10 text-[12px] leading-[1.5] text-center">
-          This is an advertorial. {companyName} is a real estate investment company, not a licensed real estate brokerage, and does not provide real estate brokerage services. Cash offers are based on property condition, location, and market value. No offer is guaranteed until presented in writing. There is no cost and no obligation to request an offer. Testimonials reflect individual experiences and are not a guarantee of outcome.
+          This is an advertorial. {companyName} is a real estate investment company. It is not a licensed real estate brokerage and does not provide brokerage services. Cash offers depend on the condition of the property, its location, and its market value. No offer is binding until it is put in writing. Requesting an offer carries no cost and no obligation. Testimonials describe individual experiences and do not guarantee any particular result.
         </p>
       </article>
 
@@ -289,11 +370,11 @@ export function AdvertorialPage({
         className="fixed left-0 right-0 top-0 z-40 bg-white px-4 py-3"
       >
         <div className="max-w-[760px] mx-auto flex gap-2.5 items-center">
-          <label className="hidden sm:block text-[13px] font-bold whitespace-nowrap">Enter your address to start:</label>
+          <label className="hidden sm:block text-[13px] font-bold whitespace-nowrap">Type your address to begin:</label>
           <div className="flex-1 min-w-0">
             <AddressAutocomplete value={stickyAddr} onChange={setStickyAddr} onSelect={handleStickySelect} serviceAreas={serviceAreas} placeholder="Your property address" />
           </div>
-          <button onClick={goToForm} style={{ background: C.cta }} className="px-4 sm:px-[18px] py-3 text-white rounded-[9px] text-[14px] sm:text-[15px] font-extrabold whitespace-nowrap hover:opacity-95 transition-opacity">
+          <button onClick={openModalFromButton} style={{ background: C.cta }} className="px-4 sm:px-[18px] py-3 text-white rounded-[9px] text-[14px] sm:text-[15px] font-extrabold whitespace-nowrap hover:opacity-95 transition-opacity">
             See My Cash Offer →
           </button>
         </div>
