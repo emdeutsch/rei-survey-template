@@ -5,6 +5,7 @@ import config from "@/lib/config"
 import { ClickToPlayVideo } from "@/components/thankyou/click-to-play-video"
 import { ContactCTA } from "@/components/article/contact-cta"
 import { ARTICLES } from "@/lib/articles"
+import { isYouTubeUrl, toYouTubeEmbed } from "@/lib/youtube"
 
 const RECOMMENDED_READS = ARTICLES.slice(0, 4)
 
@@ -89,15 +90,26 @@ function ThankYouV2() {
             </h2>
           </div>
           <div className="rounded-2xl overflow-hidden shadow-lg border border-gray-200 bg-black">
-            <video
-              src={TOP_VIDEO_URL}
-              autoPlay
-              muted
-              playsInline
-              controls
-              className="w-full block"
-              style={{ aspectRatio: "16/9", objectFit: "cover" }}
-            />
+            {isYouTubeUrl(TOP_VIDEO_URL) ? (
+              <iframe
+                src={`${toYouTubeEmbed(TOP_VIDEO_URL)}?autoplay=1&mute=1&playsinline=1&rel=0&modestbranding=1`}
+                title={process.env.NEXT_PUBLIC_THANKYOU_TOP_VIDEO_TITLE || "Thank You for Filling Out the Form"}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                className="w-full block"
+                style={{ aspectRatio: "16/9", border: 0 }}
+              />
+            ) : (
+              <video
+                src={TOP_VIDEO_URL}
+                autoPlay
+                muted
+                playsInline
+                controls
+                className="w-full block"
+                style={{ aspectRatio: "16/9", objectFit: "cover" }}
+              />
+            )}
           </div>
         </div>
       </section>
