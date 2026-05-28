@@ -24,6 +24,13 @@ const CALLIN_HREF = process.env.NEXT_PUBLIC_CALLIN_HREF || ""
 const FOUNDER_NOTE = process.env.NEXT_PUBLIC_FOUNDER_NOTE || ""
 const HIGHLIGHT_COLOR = process.env.NEXT_PUBLIC_HIGHLIGHT_COLOR || "#FACC15"
 
+function truthy(v: string | undefined) {
+  const s = (v || "").trim().toLowerCase()
+  return s === "1" || s === "true" || s === "yes" || s === "on"
+}
+const SHOW_ARTICLES = truthy(process.env.NEXT_PUBLIC_THANKYOU_SHOW_ARTICLES)
+const SHOW_NEXT_STEPS = truthy(process.env.NEXT_PUBLIC_THANKYOU_SHOW_NEXT_STEPS)
+
 // New "v2" thank-you layout activates only when the top video env var is set.
 // Existing clients without the env var see the original layout untouched.
 const useV2Layout = Boolean(TOP_VIDEO_URL)
@@ -177,6 +184,78 @@ function ThankYouV2() {
                   <ClickToPlayVideo src={v.url} title={v.title || "Video"} />
                 </div>
               ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {SHOW_ARTICLES && (
+        <section className="bg-white border-t border-gray-200">
+          <div className="mx-auto max-w-2xl px-4 py-14 md:py-20">
+            <div className="rounded-2xl bg-white border border-gray-100 shadow-sm p-6 md:p-8">
+              <h3 className="text-lg font-bold text-gray-900 mb-1">While You Wait, a Few Honest Reads</h3>
+              <p className="text-sm text-gray-500 mb-5">
+                Straight talk on the questions almost every homeowner asks before they sell.
+              </p>
+              <div className="grid grid-cols-1 gap-3">
+                {RECOMMENDED_READS.map((a) => (
+                  <Link
+                    key={a.slug}
+                    href={a.slug}
+                    className="group flex gap-4 rounded-xl border border-gray-200 p-3 transition-colors hover:bg-gray-50 no-underline"
+                  >
+                    <Image
+                      src={a.image}
+                      alt={a.title}
+                      width={120}
+                      height={90}
+                      className="h-[72px] w-[96px] sm:h-[84px] sm:w-[112px] shrink-0 rounded-lg object-cover bg-gray-100"
+                    />
+                    <div className="min-w-0">
+                      <div className="font-bold text-gray-900 leading-snug">{a.title}</div>
+                      <p className="mt-1 text-sm text-gray-500 line-clamp-2">{a.teaser}</p>
+                      <span className="mt-1 inline-block text-sm font-semibold" style={{ color: config.accentColor }}>
+                        Read the article &rarr;
+                      </span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+              <div className="mt-4 text-center">
+                <Link href="/articles" className="text-sm font-semibold underline" style={{ color: config.accentColor }}>
+                  See all articles
+                </Link>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {SHOW_NEXT_STEPS && (
+        <section className="bg-[#FAFAF9]">
+          <div className="mx-auto max-w-2xl px-4 py-14 md:py-20">
+            <div className="rounded-2xl bg-white border border-gray-100 shadow-sm p-6 md:p-8">
+              <h3 className="text-lg font-bold text-gray-900 mb-4">What Happens Next</h3>
+              <div className="space-y-4">
+                {[
+                  { step: "1", title: "We review your property", desc: "Our team looks at your submission and researches the property." },
+                  { step: "2", title: "You get a cash offer", desc: "Within 24 hours, we’ll reach out with a fair, no-obligation offer." },
+                  { step: "3", title: "You choose your closing date", desc: "If you accept, you pick the date. We handle the rest." },
+                ].map(({ step, title, desc }) => (
+                  <div key={step} className="flex gap-4">
+                    <div
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
+                      style={{ backgroundColor: config.accentColor }}
+                    >
+                      {step}
+                    </div>
+                    <div>
+                      <p className="font-semibold text-gray-900">{title}</p>
+                      <p className="text-sm text-gray-500">{desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </section>
