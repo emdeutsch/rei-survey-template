@@ -37,8 +37,6 @@ import {
   Smile,
   Wrench,
   HardHat,
-  Phone,
-  MessageSquare,
   Eye,
 } from "lucide-react"
 import { AddressAutocomplete, type AddressDetails, type ServiceArea } from "@/components/survey/address-autocomplete"
@@ -54,23 +52,27 @@ declare global {
 /**
  * Zero-distraction multi-step form. Pathway pattern: qualifying questions
  * FIRST, contact info LAST. Submits to the existing /api/submit route.
+ *
+ * Qualification gating (no hard disqualify): EVERY visitor can complete the
+ * form and is saved to the CRM. The browser Meta Lead pixel fires ONLY for
+ * QUALIFIED leads, and the payload carries qualified:true/false so the
+ * server-side CAPI / n8n can gate the same event. A lead is qualified when
+ * ALL of these hold:
+ *   - whoAreYou is owner / part-owner / family (not agent / wholesaler / other)
+ *   - timeline is not "just exploring"
+ *   - yearsOwned is 5+ years (not 0-2 or 3-5)
+ *   - condition is not "excellent"
  */
 
 type Props = {
   accentColor: string
   serviceAreas: ServiceArea[]
   disqualifiedPropertyTypes: string[]
-  phoneHref: string
-  phoneDisplay: string
+  // Still accepted for API compatibility with the page; not used since the
+  // hard call/text disqualify screen was removed.
+  phoneHref?: string
+  phoneDisplay?: string
 }
-
-const DQ_REASONS = {
-  notOwner: "We only work directly with property owners (or co-owners / family with rights to sell).",
-  excellent: "Excellent-condition homes do best on the open market through a realtor. We focus on as-is.",
-  recentlyBought: "We only buy homes that have been owned for 5+ years.",
-  exploring: "Sounds like you're just gathering info right now. When you're ready to sell, we'll be here.",
-} as const
-type DqKey = keyof typeof DQ_REASONS
 
 type FormState = {
   propertyType: string
@@ -87,6 +89,16 @@ type FormState = {
   email: string
   phone: string
   hp_company: string
+}
+
+// A lead is QUALIFIED (Meta Lead pixel allowed to fire) only when all fit
+// rules pass. Unqualified leads still submit + save; they just don't fire Lead.
+function isQualifiedLead(form: FormState): boolean {
+  const ownerOk = ["owner", "part-owner", "family"].includes(form.whoAreYou)
+  const timelineOk = form.timeline !== "exploring"
+  const yearsOk = form.yearsOwned !== "0-2" && form.yearsOwned !== "3-5"
+  const conditionOk = form.condition !== "excellent"
+  return ownerOk && timelineOk && yearsOk && conditionOk
 }
 
 function formatPhoneDisplay(raw: string): string {
@@ -211,28 +223,12 @@ function StepHeader({ children }: { children: React.ReactNode }) {
   )
 }
 
-export function ZeroDistractionForm({ accentColor, serviceAreas, disqualifiedPropertyTypes, phoneHref, phoneDisplay }: Props) {
+export function ZeroDistractionForm({ accentColor, serviceAreas, disqualifiedPropertyTypes }: Props) {
   const [step, setStep] = useState(1)
   const TOTAL_STEPS = 9
   const [outsideAreaError, setOutsideAreaError] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState("")
-  const [dq, setDq] = useState<DqKey | null>(null)
-
-  const smsHref = `sms:${phoneHref}?body=${encodeURIComponent("I was unable to fill out the form but I would still like an offer.")}`
-
-  const checkDq = (key: keyof FormState, value: FormState[keyof FormState]): DqKey | null => {
-    if (key === "whoAreYou" && typeof value === "string") {
-      const qualified = ["owner", "part-owner", "family"]
-      if (!qualified.includes(value)) return "notOwner"
-    }
-    if (key === "timeline" && value === "exploring") return "exploring"
-    if (key === "yearsOwned" && typeof value === "string") {
-      if (value === "0-2" || value === "3-5") return "recentlyBought"
-    }
-    if (key === "condition" && value === "excellent") return "excellent"
-    return null
-  }
 
   const [form, setForm] = useState<FormState>({
     propertyType: "",
@@ -255,16 +251,13 @@ export function ZeroDistractionForm({ accentColor, serviceAreas, disqualifiedPro
     setForm(prev => ({ ...prev, [key]: value }))
   }
 
+  // Auto-advance after a choice. No hard disqualify — every visitor proceeds.
   const pickAndAdvance = <K extends keyof FormState>(key: K, value: FormState[K]) => {
     setForm(prev => ({ ...prev, [key]: value }))
-    const dqHit = checkDq(key, value)
-    if (dqHit) {
-      setTimeout(() => setDq(dqHit), 150)
-      return
-    }
     setTimeout(() => setStep(s => Math.min(s + 1, TOTAL_STEPS)), 150)
   }
 
+  // Soft-flag for n8n routing; does not block.
   const isPropertyDisqualified = (typeId: string) => disqualifiedPropertyTypes.includes(typeId)
 
   const isInServiceArea = (details: AddressDetails): boolean => {
@@ -304,12 +297,18 @@ export function ZeroDistractionForm({ accentColor, serviceAreas, disqualifiedPro
 
       const tracking = readCapturedTracking()
 
+      // Qualification gate. Unqualified leads still save to the CRM, but we do
+      // NOT fire the Meta Lead pixel for them and we flag qualified:false so
+      // server-side CAPI can suppress the same event (no Meta pollution).
+      const qualified = isQualifiedLead(form)
+
       const emailNorm = form.email.toLowerCase().trim().replace(/[^a-z0-9]/g, "")
       const eventID = emailNorm
         ? `rei_lead_${emailNorm.slice(0, 16)}`
         : `rei_lead_anon_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`
 
-      if (typeof window !== "undefined" && window.fbq) {
+      // Fire the browser Meta Lead pixel ONLY for qualified leads.
+      if (qualified && typeof window !== "undefined" && window.fbq) {
         window.fbq("track", "Lead", {
           value: score.meta_value,
           currency: "USD",
@@ -343,7 +342,9 @@ export function ZeroDistractionForm({ accentColor, serviceAreas, disqualifiedPro
         lead_score_breakdown: score.breakdown,
 
         event_id: eventID,
-        qualified: true,
+        // Drives server-side CAPI gating + CRM routing. Only true leads should
+        // ever fire a Meta Lead event (browser OR server).
+        qualified,
 
         utm_source:   tracking.utm_source   ?? "",
         utm_medium:   tracking.utm_medium   ?? "",
@@ -379,51 +380,6 @@ export function ZeroDistractionForm({ accentColor, serviceAreas, disqualifiedPro
       setSubmitError(err instanceof Error ? err.message : "Something went wrong")
       setSubmitting(false)
     }
-  }
-
-  if (dq) {
-    return (
-      <div className="bg-white rounded-2xl shadow-md border border-gray-100 p-5 md:p-8 text-center">
-        <div
-          className="mx-auto flex h-14 w-14 items-center justify-center rounded-full mb-4"
-          style={{ backgroundColor: `${accentColor}1A`, color: accentColor }}
-        >
-          <Phone className="h-7 w-7" />
-        </div>
-        <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-2">
-          Let&apos;s talk directly.
-        </h2>
-        <p className="text-sm md:text-base text-gray-600 mb-2 max-w-md mx-auto">
-          {DQ_REASONS[dq]}
-        </p>
-        <p className="text-sm md:text-base text-gray-700 font-medium mb-6 max-w-md mx-auto">
-          That said, we&apos;d still like to hear from you. Call or text and we&apos;ll see what we can do.
-        </p>
-
-        <div className="grid grid-cols-2 gap-3 max-w-sm mx-auto">
-          <a
-            href={`tel:${phoneHref}`}
-            className="flex items-center justify-center gap-2 h-14 rounded-xl text-white font-semibold text-base shadow-sm active:scale-[0.98] transition-transform"
-            style={{ backgroundColor: accentColor }}
-          >
-            <Phone className="h-5 w-5" />
-            <span>Call Us</span>
-          </a>
-          <a
-            href={smsHref}
-            className="flex items-center justify-center gap-2 h-14 rounded-xl font-semibold text-base shadow-sm active:scale-[0.98] transition-transform border-2"
-            style={{ borderColor: accentColor, color: accentColor, backgroundColor: "#ffffff" }}
-          >
-            <MessageSquare className="h-5 w-5" />
-            <span>Text Us</span>
-          </a>
-        </div>
-
-        <p className="mt-4 text-sm font-medium text-gray-500">
-          {phoneDisplay}
-        </p>
-      </div>
-    )
   }
 
   return (
