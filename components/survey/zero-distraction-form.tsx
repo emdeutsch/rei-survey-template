@@ -336,6 +336,17 @@ export function ZeroDistractionForm({ accentColor, serviceAreas, disqualifiedPro
         reason:           form.reason,
         condition:        form.condition,
 
+        // Legacy field-name aliases. Every client's existing n8n Lead Handler
+        // maps these keys (they were built for the homepage survey form). Sent
+        // alongside the snake_case keys above so v3 leads populate GHL / Slack /
+        // Discord with no workflow changes. The Lead Handlers have no value
+        // branching, so the raw v3 values populate cleanly.
+        firstName:      form.firstName,
+        lastName:       form.lastName,
+        propertyType:   form.propertyType,
+        isLegalOwner:   form.whoAreYou,
+        listedOnMarket: form.listedOnMarket,
+
         lead_score:           score.lead_score,
         lead_quality:         score.lead_quality,
         lead_meta_value:      score.meta_value,
