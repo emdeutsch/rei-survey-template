@@ -49,27 +49,10 @@ declare global {
   }
 }
 
-/**
- * Zero-distraction multi-step form. Pathway pattern: qualifying questions
- * FIRST, contact info LAST. Submits to the existing /api/submit route.
- *
- * Qualification gating (no hard disqualify): EVERY visitor can complete the
- * form and is saved to the CRM. The browser Meta Lead pixel fires ONLY for
- * QUALIFIED leads, and the payload carries qualified:true/false so the
- * server-side CAPI / n8n can gate the same event. A lead is qualified when
- * ALL of these hold:
- *   - whoAreYou is owner / part-owner / family (not agent / wholesaler / other)
- *   - timeline is not "just exploring"
- *   - yearsOwned is 5+ years (not 0-2 or 3-5)
- *   - condition is not "excellent"
- */
-
 type Props = {
   accentColor: string
   serviceAreas: ServiceArea[]
   disqualifiedPropertyTypes: string[]
-  // Still accepted for API compatibility with the page; not used since the
-  // hard call/text disqualify screen was removed.
   phoneHref?: string
   phoneDisplay?: string
 }
@@ -91,8 +74,24 @@ type FormState = {
   hp_company: string
 }
 
-// A lead is QUALIFIED (Meta Lead pixel allowed to fire) only when all fit
-// rules pass. Unqualified leads still submit + save; they just don't fire Lead.
+// HARD disqualifiers — these block the user on a 'can't make an offer' screen
+// (no lead captured, no pixel). Distinct from the pixel qualification gate
+// below, which only suppresses the Meta Lead event but lets the lead complete.
+const DQ_REASONS = {
+  notOwner: "We work directly with property owners, so we're not able to make an offer in this case.",
+  listed: "Your home is currently listed on the market, so we can't make an offer right now. Once it's off-market, we'd be glad to take a look.",
+} as const
+type DqKey = keyof typeof DQ_REASONS
+
+function checkHardDq(key: keyof FormState, value: string): DqKey | null {
+  if (key === "whoAreYou" && (value === "wholesaler" || value === "other")) return "notOwner"
+  if (key === "listedOnMarket" && value === "yes") return "listed"
+  return null
+}
+
+// Pixel qualification gate. A completed lead fires the Meta Lead pixel only
+// when all soft fit rules pass (owner/part-owner/family, not just-exploring,
+// owned 5+ years, not excellent condition). Hard-DQ'd users never reach here.
 function isQualifiedLead(form: FormState): boolean {
   const ownerOk = ["owner", "part-owner", "family"].includes(form.whoAreYou)
   const timelineOk = form.timeline !== "exploring"
@@ -229,6 +228,7 @@ export function ZeroDistractionForm({ accentColor, serviceAreas, disqualifiedPro
   const [outsideAreaError, setOutsideAreaError] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState("")
+  const [dq, setDq] = useState<DqKey | null>(null)
 
   const [form, setForm] = useState<FormState>({
     propertyType: "",
@@ -251,13 +251,18 @@ export function ZeroDistractionForm({ accentColor, serviceAreas, disqualifiedPro
     setForm(prev => ({ ...prev, [key]: value }))
   }
 
-  // Auto-advance after a choice. No hard disqualify — every visitor proceeds.
+  // Auto-advance after a choice. Hard-DQ selections short-circuit to the DQ
+  // screen; everything else proceeds (soft rules only affect the pixel).
   const pickAndAdvance = <K extends keyof FormState>(key: K, value: FormState[K]) => {
     setForm(prev => ({ ...prev, [key]: value }))
+    const hardDq = typeof value === "string" ? checkHardDq(key, value) : null
+    if (hardDq) {
+      setTimeout(() => setDq(hardDq), 150)
+      return
+    }
     setTimeout(() => setStep(s => Math.min(s + 1, TOTAL_STEPS)), 150)
   }
 
-  // Soft-flag for n8n routing; does not block.
   const isPropertyDisqualified = (typeId: string) => disqualifiedPropertyTypes.includes(typeId)
 
   const isInServiceArea = (details: AddressDetails): boolean => {
@@ -296,10 +301,6 @@ export function ZeroDistractionForm({ accentColor, serviceAreas, disqualifiedPro
       })
 
       const tracking = readCapturedTracking()
-
-      // Qualification gate. Unqualified leads still save to the CRM, but we do
-      // NOT fire the Meta Lead pixel for them and we flag qualified:false so
-      // server-side CAPI can suppress the same event (no Meta pollution).
       const qualified = isQualifiedLead(form)
 
       const emailNorm = form.email.toLowerCase().trim().replace(/[^a-z0-9]/g, "")
@@ -307,7 +308,6 @@ export function ZeroDistractionForm({ accentColor, serviceAreas, disqualifiedPro
         ? `rei_lead_${emailNorm.slice(0, 16)}`
         : `rei_lead_anon_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`
 
-      // Fire the browser Meta Lead pixel ONLY for qualified leads.
       if (qualified && typeof window !== "undefined" && window.fbq) {
         window.fbq("track", "Lead", {
           value: score.meta_value,
@@ -336,11 +336,7 @@ export function ZeroDistractionForm({ accentColor, serviceAreas, disqualifiedPro
         reason:           form.reason,
         condition:        form.condition,
 
-        // Legacy field-name aliases. Every client's existing n8n Lead Handler
-        // maps these keys (they were built for the homepage survey form). Sent
-        // alongside the snake_case keys above so v3 leads populate GHL / Slack /
-        // Discord with no workflow changes. The Lead Handlers have no value
-        // branching, so the raw v3 values populate cleanly.
+        // Legacy field-name aliases consumed by the existing n8n Lead Handler.
         firstName:      form.firstName,
         lastName:       form.lastName,
         propertyType:   form.propertyType,
@@ -353,8 +349,6 @@ export function ZeroDistractionForm({ accentColor, serviceAreas, disqualifiedPro
         lead_score_breakdown: score.breakdown,
 
         event_id: eventID,
-        // Drives server-side CAPI gating + CRM routing. Only true leads should
-        // ever fire a Meta Lead event (browser OR server).
         qualified,
 
         utm_source:   tracking.utm_source   ?? "",
@@ -391,6 +385,20 @@ export function ZeroDistractionForm({ accentColor, serviceAreas, disqualifiedPro
       setSubmitError(err instanceof Error ? err.message : "Something went wrong")
       setSubmitting(false)
     }
+  }
+
+  // ---- Hard-DQ screen ----
+  if (dq) {
+    return (
+      <div className="bg-white rounded-2xl shadow-md border border-gray-100 p-6 md:p-8 text-center">
+        <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-3">
+          We&apos;re not able to make an offer
+        </h2>
+        <p className="text-sm md:text-base text-gray-600 max-w-md mx-auto">
+          {DQ_REASONS[dq]}
+        </p>
+      </div>
+    )
   }
 
   return (
