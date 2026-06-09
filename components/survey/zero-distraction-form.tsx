@@ -74,24 +74,24 @@ type FormState = {
   hp_company: string
 }
 
-// HARD disqualifiers — these block the user on a 'can't make an offer' screen
-// (no lead captured, no pixel). Distinct from the pixel qualification gate
-// below, which only suppresses the Meta Lead event but lets the lead complete.
+// HARD disqualifiers — block the user on a 'can't make an offer' screen (no
+// lead captured, no pixel). Distinct from the pixel qualification gate below.
 const DQ_REASONS = {
   notOwner: "We work directly with property owners, so we're not able to make an offer in this case.",
   listed: "Your home is currently listed on the market, so we can't make an offer right now. Once it's off-market, we'd be glad to take a look.",
+  exploring: "It sounds like you're just gathering information right now. When you're ready to sell, come back and we'll get you a cash offer.",
 } as const
 type DqKey = keyof typeof DQ_REASONS
 
 function checkHardDq(key: keyof FormState, value: string): DqKey | null {
-  if (key === "whoAreYou" && (value === "wholesaler" || value === "other")) return "notOwner"
+  if (key === "whoAreYou" && (value === "agent" || value === "wholesaler" || value === "other")) return "notOwner"
   if (key === "listedOnMarket" && value === "yes") return "listed"
+  if (key === "timeline" && value === "exploring") return "exploring"
   return null
 }
 
 // Pixel qualification gate. A completed lead fires the Meta Lead pixel only
-// when all soft fit rules pass (owner/part-owner/family, not just-exploring,
-// owned 5+ years, not excellent condition). Hard-DQ'd users never reach here.
+// when all soft fit rules pass. Hard-DQ'd users never reach here.
 function isQualifiedLead(form: FormState): boolean {
   const ownerOk = ["owner", "part-owner", "family"].includes(form.whoAreYou)
   const timelineOk = form.timeline !== "exploring"
