@@ -66,6 +66,13 @@ const REASON_WEIGHTS: Record<string, number> = {
   "downsize":     8,
   "relocation":   4,
   "other":        5,
+  // v2 list IDs (MOTIVATION_V2). "no-reason" DQs pre-submit so its weight is moot.
+  "behind-payments":  15,
+  "urgent-financial": 15,
+  "inherited":        13,
+  "vacant":            9,
+  "personal":          5,
+  "no-reason":         0,
 }
 
 const CONDITION_WEIGHTS: Record<string, number> = {

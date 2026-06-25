@@ -28,6 +28,7 @@ export default function AdvertorialRoute() {
         ownerName={config.ownerName}
         headshotUrl={config.headshotUrl}
         serviceAreas={serviceAreas}
+        motivationV2={config.motivationV2}
       />
     </main>
   )

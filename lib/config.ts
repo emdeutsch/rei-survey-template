@@ -56,6 +56,13 @@ const config = {
   // projects deploying rei-survey-template@main have no IBUYKC_STYLE env → falsy
   // → byte-identical legacy style.
   useIbuykcStyle:  process.env.IBUYKC_STYLE === "true",
+
+  // Motivation list flag — when MOTIVATION_V2 === "true" (default for new clients
+  // via the env-schema default), both forms (v1 homepage + /v3) render William's
+  // v2 reason-for-selling list, including the "No reason / seeing what my house is
+  // worth" hard-disqualifier. Existing rei-survey-template@main projects without
+  // this env → falsy → byte-identical legacy reason list, no disqualifier.
+  motivationV2:    process.env.MOTIVATION_V2 === "true",
 } as const
 
 export default config

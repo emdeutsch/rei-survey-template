@@ -77,6 +77,7 @@ export default function V3Page() {
           disqualifiedPropertyTypes={disqualifiedPropertyTypes}
           phoneHref={config.phoneHref}
           phoneDisplay={config.phoneDisplay}
+          motivationV2={config.motivationV2}
         />
       </div>
 

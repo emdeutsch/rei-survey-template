@@ -20,6 +20,8 @@ interface AdvertorialPageProps {
   ownerName?: string
   headshotUrl?: string
   serviceAreas: ServiceArea[]
+  // Forwarded to SurveyCard so the advertorial funnel honors MOTIVATION_V2 too.
+  motivationV2?: boolean
 }
 
 export function AdvertorialPage({
@@ -31,6 +33,7 @@ export function AdvertorialPage({
   ownerName,
   headshotUrl,
   serviceAreas,
+  motivationV2 = false,
 }: AdvertorialPageProps) {
   const market = marketName || "your area"
   const where = market === "your area" ? "the areas we serve" : market
@@ -295,7 +298,7 @@ export function AdvertorialPage({
             <p style={{ color: C.muted }} className="mt-1 text-[15px]">A handful of quick questions. No cost, nothing owed, no arm-twisting.</p>
           </div>
           <div className="flex justify-center">
-            <SurveyCard phoneDisplay={phoneDisplay} phoneHref={phoneHref} serviceAreas={serviceAreas} />
+            <SurveyCard phoneDisplay={phoneDisplay} phoneHref={phoneHref} serviceAreas={serviceAreas} motivationV2={motivationV2} />
           </div>
           <p style={{ color: C.muted }} className="text-center text-[13px] mt-3.5 max-w-[460px] mx-auto leading-[1.5]">
             Your information stays private. We never sell or share it. Requesting an offer is free and carries no obligation.
@@ -391,6 +394,7 @@ export function AdvertorialPage({
               serviceAreas={serviceAreas}
               initialAddress={seeded?.address}
               initialStep={seeded && seeded.state ? 2 : undefined}
+              motivationV2={motivationV2}
             />
           </div>
         </div>

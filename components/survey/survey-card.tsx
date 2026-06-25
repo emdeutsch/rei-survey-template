@@ -71,6 +71,21 @@ const REASON_OPTIONS = [
   { id: "other", label: "Other" },
 ]
 
+// William's v2 reason list — rendered only when MOTIVATION_V2 is on (new clients).
+// The final option ("no-reason") is a hard-disqualifier: selecting it shows the
+// block screen and the lead is never submitted (see handleOptionSelect).
+const REASON_OPTIONS_V2 = [
+  { id: "foreclosure", label: "Facing foreclosure" },
+  { id: "behind-payments", label: "Behind on payments" },
+  { id: "inherited", label: "Inherited property" },
+  { id: "divorce", label: "Divorce or separation" },
+  { id: "repairs", label: "Can't afford repairs" },
+  { id: "vacant", label: "Vacant property I need to sell" },
+  { id: "urgent-financial", label: "Urgent financial situation not listed above" },
+  { id: "personal", label: "Personal situation not listed above" },
+  { id: "no-reason", label: "No reason / seeing what my house is worth" },
+]
+
 const OWNERSHIP_LENGTH_OPTIONS = [
   { id: "less-than-3", label: "Less than 3 years" },
   { id: "3-to-5", label: "3 to 5 years" },
@@ -89,6 +104,8 @@ const SCORE_REASON: Record<string, number> = {
   'inherited': 2, 'repairs': 2,
   'other': 1,
   'relocation': 0, 'divorce': 0, 'downsizing': 0,
+  // v2 list IDs (MOTIVATION_V2). 'no-reason' DQs pre-submit so its weight is moot.
+  'urgent-financial': 3, 'vacant': 2, 'personal': 1, 'no-reason': 0,
 }
 const SCORE_CONDITION: Record<string, number> = {
   'poor': 1, 'distressed': 1,
@@ -204,9 +221,13 @@ interface SurveyCardProps {
   // These props do NOT change the form's submit, webhook, or redirect behavior.
   initialAddress?: string
   initialStep?: number
+  // When true (MOTIVATION_V2), render William's v2 reason list incl. the
+  // "no-reason" hard-disqualifier. Passed from the server page (config.motivationV2)
+  // — this client component must NOT import lib/config.
+  motivationV2?: boolean
 }
 
-export function SurveyCard({ phoneDisplay = "(800) 000-0000", phoneHref = "8000000000", serviceAreas = [], disqualifiedPropertyTypes = ["mobile-home", "land", "other"], initialAddress, initialStep }: SurveyCardProps) {
+export function SurveyCard({ phoneDisplay = "(800) 000-0000", phoneHref = "8000000000", serviceAreas = [], disqualifiedPropertyTypes = ["mobile-home", "land", "other"], initialAddress, initialStep, motivationV2 = false }: SurveyCardProps) {
   const [step, setStep] = useState(initialStep && initialStep >= 2 && initialStep <= 8 ? initialStep : 1)
   const [surveyData, setSurveyData] = useState<SurveyData>({
     address: initialAddress ?? "",
@@ -381,6 +402,13 @@ export function SurveyCard({ phoneDisplay = "(800) 000-0000", phoneHref = "80000
       setTimeout(() => { setDisqualifyReason("notOwner"); setIsDisqualified(true) }, 300)
       return
     }
+    // v2 motivation list (MOTIVATION_V2): "no reason / seeing what my house is
+    // worth" hard-disqualifies — block screen, lead never submitted. The id only
+    // exists in REASON_OPTIONS_V2, so this branch is inert for the legacy list.
+    if (field === "reason" && value === "no-reason") {
+      setTimeout(() => { setDisqualifyReason("noReason"); setIsDisqualified(true) }, 300)
+      return
+    }
 
     setTimeout(() => { if (step < totalSteps) setStep(step + 1) }, 300)
   }
@@ -431,6 +459,11 @@ export function SurveyCard({ phoneDisplay = "(800) 000-0000", phoneHref = "80000
         title: "Outside Our Service Area",
         message: "Unfortunately, we don't currently buy properties in that area.",
         detail: "We only serve select markets at this time. If you believe your property is within our coverage area, please try a different address or give us a call.",
+      },
+      noReason: {
+        title: "Just Browsing?",
+        message: "It sounds like you're gathering information right now rather than looking to sell.",
+        detail: "When you're ready to sell, come back and we'll get you a fair cash offer. Feel free to call us any time if your situation changes.",
       },
     }
     const msg = disqualifyMessages[disqualifyReason] || disqualifyMessages.notOwner
@@ -580,7 +613,7 @@ export function SurveyCard({ phoneDisplay = "(800) 000-0000", phoneHref = "80000
               <p className="mt-1 text-sm text-gray-500">This helps us understand your situation better.</p>
             </div>
             <div className="grid grid-cols-2 gap-2">
-              {REASON_OPTIONS.map((option) => renderOptionButton(option, surveyData.reason, "reason"))}
+              {(motivationV2 ? REASON_OPTIONS_V2 : REASON_OPTIONS).map((option) => renderOptionButton(option, surveyData.reason, "reason"))}
             </div>
           </div>
         )}

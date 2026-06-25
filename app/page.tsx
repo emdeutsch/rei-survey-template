@@ -77,6 +77,7 @@ export default function HomePage() {
               phoneHref={config.phoneHref}
               serviceAreas={parsedServiceAreas}
               disqualifiedPropertyTypes={disqualifiedPropertyTypes}
+              motivationV2={config.motivationV2}
             />
           </div>
 

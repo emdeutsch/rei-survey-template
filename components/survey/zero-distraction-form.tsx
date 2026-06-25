@@ -26,6 +26,9 @@ import {
   KeyRound,
   Hammer,
   AlertTriangle,
+  AlertCircle,
+  Clock,
+  Search,
   Split,
   ChevronRight,
   User,
@@ -55,6 +58,10 @@ type Props = {
   disqualifiedPropertyTypes: string[]
   phoneHref?: string
   phoneDisplay?: string
+  // When true (MOTIVATION_V2), render William's v2 reason list incl. the
+  // "no-reason" hard-disqualifier. Passed from the server page (config.motivationV2)
+  // — this client component must NOT import lib/config.
+  motivationV2?: boolean
 }
 
 type FormState = {
@@ -80,6 +87,7 @@ const DQ_REASONS = {
   notOwner: "We work directly with property owners, so we're not able to make an offer in this case.",
   listed: "Your home is currently listed on the market, so we can't make an offer right now. Once it's off-market, we'd be glad to take a look.",
   exploring: "It sounds like you're just gathering information right now. When you're ready to sell, come back and we'll get you a cash offer.",
+  noReason: "It sounds like you're just gathering information right now. When you're ready to sell, come back and we'll get you a cash offer.",
 } as const
 type DqKey = keyof typeof DQ_REASONS
 
@@ -87,6 +95,10 @@ function checkHardDq(key: keyof FormState, value: string): DqKey | null {
   if (key === "whoAreYou" && (value === "agent" || value === "wholesaler" || value === "other")) return "notOwner"
   if (key === "listedOnMarket" && value === "yes") return "listed"
   if (key === "timeline" && value === "exploring") return "exploring"
+  // v2 motivation list (MOTIVATION_V2): "no reason / seeing what my house is worth"
+  // hard-disqualifies. The id only exists in REASON_OPTIONS_V2, so this is inert
+  // for the legacy list.
+  if (key === "reason" && value === "no-reason") return "noReason"
   return null
 }
 
@@ -160,6 +172,21 @@ const REASON_OPTIONS: Choice[] = [
   { id: "other",       label: "Other",                     icon: HelpCircle },
 ]
 
+// William's v2 reason list — rendered only when MOTIVATION_V2 is on (new clients).
+// "no-reason" is a hard-disqualifier handled in checkHardDq: selecting it shows the
+// block screen and the lead is never submitted (same path as timeline "exploring").
+const REASON_OPTIONS_V2: Choice[] = [
+  { id: "foreclosure",      label: "Facing foreclosure",                          icon: AlertTriangle },
+  { id: "behind-payments",  label: "Behind on payments",                          icon: Clock },
+  { id: "inherited",        label: "Inherited property",                          icon: Gift },
+  { id: "divorce",          label: "Divorce or separation",                       icon: Split },
+  { id: "repairs",          label: "Can't afford repairs",                        icon: Hammer },
+  { id: "vacant",           label: "Vacant property I need to sell",              icon: Home },
+  { id: "urgent-financial", label: "Urgent financial situation not listed above", icon: AlertCircle },
+  { id: "personal",         label: "Personal situation not listed above",         icon: HelpCircle },
+  { id: "no-reason",        label: "No reason / seeing what my house is worth",   icon: Search },
+]
+
 type ConditionChoice = { id: string; label: string; sub: string; icon: LucideIcon }
 const CONDITION_OPTIONS: ConditionChoice[] = [
   { id: "excellent", label: "Excellent", sub: "2025+ build or recently renovated. Move-in ready.", icon: Sparkles },
@@ -222,7 +249,7 @@ function StepHeader({ children }: { children: React.ReactNode }) {
   )
 }
 
-export function ZeroDistractionForm({ accentColor, serviceAreas, disqualifiedPropertyTypes }: Props) {
+export function ZeroDistractionForm({ accentColor, serviceAreas, disqualifiedPropertyTypes, motivationV2 = false }: Props) {
   const [step, setStep] = useState(1)
   const TOTAL_STEPS = 9
   const [outsideAreaError, setOutsideAreaError] = useState(false)
@@ -484,7 +511,7 @@ export function ZeroDistractionForm({ accentColor, serviceAreas, disqualifiedPro
         <div>
           <StepHeader>What&apos;s the main reason for selling?</StepHeader>
           <div className="space-y-3">
-            {REASON_OPTIONS.map(c => (
+            {(motivationV2 ? REASON_OPTIONS_V2 : REASON_OPTIONS).map(c => (
               <ChoiceButton key={c.id} accentColor={accentColor} choice={c} selected={form.reason === c.id} onClick={() => pickAndAdvance("reason", c.id)} />
             ))}
           </div>
